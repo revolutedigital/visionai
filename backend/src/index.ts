@@ -54,6 +54,8 @@ const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
   process.env.FRONTEND_URL || '', // Railway frontend (configurável)
   'https://scampepisico-frontend.up.railway.app', // Fallback Railway
+  'https://visionaifront-production.up.railway.app', // Railway frontend produção
+  'https://visionai-production.up.railway.app', // Backend Railway (para testes)
 ];
 
 app.use(cors({
