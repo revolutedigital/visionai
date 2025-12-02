@@ -1,0 +1,12 @@
+{
+  "name": "scampepisico",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd backend && npm install && npx prisma generate && npm run build",
+    "start": "cd backend && npx prisma migrate deploy && npm start"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
