@@ -11,8 +11,22 @@ export class CacheService {
   constructor() {
     // Suporta REDIS_URL do Railway ou config individual
     const redisConfig = process.env.REDIS_URL
-      ? process.env.REDIS_URL
+      ? {
+          // Railway Redis URL
+          url: process.env.REDIS_URL,
+          maxRetriesPerRequest: 3,
+          // Timeouts agressivos para evitar travar
+          connectTimeout: 5000,
+          commandTimeout: 5000,
+          // TLS pode ser necessário no Railway
+          tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
+          retryStrategy: (times) => {
+            const delay = Math.min(times * 50, 2000);
+            return delay;
+          },
+        }
       : {
+          // Config local
           host: process.env.REDIS_HOST || 'localhost',
           port: parseInt(process.env.REDIS_PORT || '6379'),
           password: process.env.REDIS_PASSWORD,

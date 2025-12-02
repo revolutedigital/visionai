@@ -3,8 +3,19 @@ import Redis from 'ioredis';
 
 // Configuração do Redis - suporta REDIS_URL do Railway ou config individual
 const redisConfig = process.env.REDIS_URL
-  ? process.env.REDIS_URL
+  ? {
+      // Railway Redis URL
+      url: process.env.REDIS_URL,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      // Timeouts agressivos para evitar travar
+      connectTimeout: 5000,
+      commandTimeout: 5000,
+      // TLS pode ser necessário no Railway
+      tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
+    }
   : {
+      // Config local
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD || undefined,
