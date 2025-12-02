@@ -1,14 +1,16 @@
 import Queue from 'bull';
 import Redis from 'ioredis';
 
-// Configuração do Redis
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || undefined,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-};
+// Configuração do Redis - suporta REDIS_URL do Railway ou config individual
+const redisConfig = process.env.REDIS_URL
+  ? process.env.REDIS_URL
+  : {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    };
 
 // Criar client Redis para o Bull
 const createRedisClient = (type: 'client' | 'subscriber' | 'bclient') => {

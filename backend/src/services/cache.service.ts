@@ -9,16 +9,21 @@ export class CacheService {
   private defaultTTL: number = 60 * 60 * 24 * 30; // 30 dias (dados da Receita são estáveis)
 
   constructor() {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-    });
+    // Suporta REDIS_URL do Railway ou config individual
+    const redisConfig = process.env.REDIS_URL
+      ? process.env.REDIS_URL
+      : {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD,
+          maxRetriesPerRequest: 3,
+          retryStrategy: (times) => {
+            const delay = Math.min(times * 50, 2000);
+            return delay;
+          },
+        };
+
+    this.redis = new Redis(redisConfig);
 
     this.redis.on('error', (error) => {
       console.error('❌ Erro Redis:', error);
