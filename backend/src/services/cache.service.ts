@@ -168,6 +168,19 @@ export class CacheService {
   }
 
   /**
+   * Limpar todo o cache (flush database)
+   */
+  async clearAll(): Promise<void> {
+    try {
+      await this.redis.flushdb();
+      console.log('🗑️  Cache CLEARED: Todos os dados do Redis foram removidos');
+    } catch (error) {
+      console.error('Erro ao limpar todo o cache:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Fechar conexão Redis
    */
   async disconnect(): Promise<void> {

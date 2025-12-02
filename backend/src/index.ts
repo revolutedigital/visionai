@@ -9,6 +9,7 @@ import analysisRoutes from './routes/analysis.routes';
 import dataQualityRoutes from './routes/data-quality.routes';
 import enrichmentRoutes from './routes/enrichment.routes';
 import tipologiaRoutes from './routes/tipologia.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 // Carregar variáveis de ambiente
@@ -129,6 +130,7 @@ app.use('/api/analysis', analysisRoutes);
 app.use('/api/data-quality', dataQualityRoutes);
 app.use('/api/enrichment', enrichmentRoutes);
 app.use('/api/tipologia', tipologiaRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middlewares (must be AFTER all routes)
 app.use(notFoundHandler);

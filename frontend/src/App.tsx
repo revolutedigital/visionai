@@ -13,6 +13,7 @@ const ClientesPage = lazy(() => import('./pages/Clientes'));
 const ClienteDetalhesPage = lazy(() => import('./pages/Clientes/ClienteDetalhesPage'));
 const PipelinePage = lazy(() => import('./pages/Pipeline'));
 const UploadPage = lazy(() => import('./pages/Upload'));
+const ConfiguracoesPage = lazy(() => import('./pages/Configuracoes'));
 
 // Loading fallback para páginas
 function PageLoader() {
@@ -75,7 +76,14 @@ function App() {
                 </Suspense>
               }
             />
-            <Route path="configuracoes" element={<ConfiguracoesPage />} />
+            <Route
+              path="configuracoes"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ConfiguracoesPage />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
           </Routes>
@@ -85,18 +93,7 @@ function App() {
   );
 }
 
-// Páginas simples não precisam de lazy loading
-function ConfiguracoesPage() {
-  return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Configurações</h1>
-        <p className="text-gray-600">Página de configurações em construção...</p>
-      </div>
-    </div>
-  );
-}
-
+// Página 404
 function NotFoundPage() {
   return (
     <div className="p-6">
