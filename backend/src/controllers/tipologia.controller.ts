@@ -44,7 +44,7 @@ export async function startTipologiaAll(req: Request, res: Response) {
     // Adicionar jobs na fila
     const jobs = await Promise.all(
       clientes.map(cliente =>
-        tipologiaQueue.add({
+        tipologiaQueue.add('classify-tipologia', {
           clienteId: cliente.id,
         })
       )
