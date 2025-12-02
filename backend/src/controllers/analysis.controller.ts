@@ -141,7 +141,7 @@ export class AnalysisController {
    */
   async getQueueStatus(req: Request, res: Response) {
     try {
-      // Tentar obter estatísticas das filas com timeout e fallback
+      // Tentar obter estatísticas das filas - valores padrão zero se falhar
       let receitaWaiting = 0, receitaActive = 0;
       let normalizationWaiting = 0, normalizationActive = 0;
       let geocodingWaiting = 0, geocodingActive = 0;
@@ -150,31 +150,8 @@ export class AnalysisController {
       let tipologiaWaiting = 0, tipologiaActive = 0, tipologiaCompleted = 0, tipologiaFailed = 0;
       let redisAvailable = true;
 
+      // Tentar queries Redis com fallback individual
       try {
-        // Timeout de 3 segundos para evitar 502
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Redis timeout')), 3000)
-        );
-
-        const queueStats = Promise.all([
-          receitaQueue.getWaitingCount(),
-          receitaQueue.getActiveCount(),
-          normalizationQueue.getWaitingCount(),
-          normalizationQueue.getActiveCount(),
-          geocodingQueue.getWaitingCount(),
-          geocodingQueue.getActiveCount(),
-          placesQueue.getWaitingCount(),
-          placesQueue.getActiveCount(),
-          analysisQueue.getWaitingCount(),
-          analysisQueue.getActiveCount(),
-          analysisQueue.getCompletedCount(),
-          analysisQueue.getFailedCount(),
-          tipologiaQueue.getWaitingCount(),
-          tipologiaQueue.getActiveCount(),
-          tipologiaQueue.getCompletedCount(),
-          tipologiaQueue.getFailedCount(),
-        ]);
-
         [
           receitaWaiting,
           receitaActive,
@@ -192,9 +169,26 @@ export class AnalysisController {
           tipologiaActive,
           tipologiaCompleted,
           tipologiaFailed,
-        ] = await Promise.race([queueStats, timeout]) as number[];
+        ] = await Promise.all([
+          receitaQueue.getWaitingCount().catch(() => 0),
+          receitaQueue.getActiveCount().catch(() => 0),
+          normalizationQueue.getWaitingCount().catch(() => 0),
+          normalizationQueue.getActiveCount().catch(() => 0),
+          geocodingQueue.getWaitingCount().catch(() => 0),
+          geocodingQueue.getActiveCount().catch(() => 0),
+          placesQueue.getWaitingCount().catch(() => 0),
+          placesQueue.getActiveCount().catch(() => 0),
+          analysisQueue.getWaitingCount().catch(() => 0),
+          analysisQueue.getActiveCount().catch(() => 0),
+          analysisQueue.getCompletedCount().catch(() => 0),
+          analysisQueue.getFailedCount().catch(() => 0),
+          tipologiaQueue.getWaitingCount().catch(() => 0),
+          tipologiaQueue.getActiveCount().catch(() => 0),
+          tipologiaQueue.getCompletedCount().catch(() => 0),
+          tipologiaQueue.getFailedCount().catch(() => 0),
+        ]);
       } catch (error: any) {
-        console.warn('⚠️  Redis indisponível, usando dados do banco de dados', error.message);
+        console.warn('⚠️  Redis indisponível', error.message);
         redisAvailable = false;
       }
 

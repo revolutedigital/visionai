@@ -130,20 +130,14 @@ export class PlacesController {
       let redisAvailable = true;
 
       try {
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Redis timeout')), 3000)
-        );
-
-        const queueStats = Promise.all([
-          placesQueue.getWaitingCount(),
-          placesQueue.getActiveCount(),
-          placesQueue.getCompletedCount(),
-          placesQueue.getFailedCount(),
+        [waiting, active, completed, failed] = await Promise.all([
+          placesQueue.getWaitingCount().catch(() => 0),
+          placesQueue.getActiveCount().catch(() => 0),
+          placesQueue.getCompletedCount().catch(() => 0),
+          placesQueue.getFailedCount().catch(() => 0),
         ]);
-
-        [waiting, active, completed, failed] = await Promise.race([queueStats, timeout]) as number[];
       } catch (error: any) {
-        console.warn('⚠️  Redis indisponível para places', error.message);
+        console.warn('⚠️  Redis indisponível', error.message);
         redisAvailable = false;
       }
 

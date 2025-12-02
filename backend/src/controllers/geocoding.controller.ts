@@ -118,20 +118,14 @@ export class GeocodingController {
       let redisAvailable = true;
 
       try {
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Redis timeout')), 3000)
-        );
-
-        const queueStats = Promise.all([
-          geocodingQueue.getWaitingCount(),
-          geocodingQueue.getActiveCount(),
-          geocodingQueue.getCompletedCount(),
-          geocodingQueue.getFailedCount(),
+        [waiting, active, completed, failed] = await Promise.all([
+          geocodingQueue.getWaitingCount().catch(() => 0),
+          geocodingQueue.getActiveCount().catch(() => 0),
+          geocodingQueue.getCompletedCount().catch(() => 0),
+          geocodingQueue.getFailedCount().catch(() => 0),
         ]);
-
-        [waiting, active, completed, failed] = await Promise.race([queueStats, timeout]) as number[];
       } catch (error: any) {
-        console.warn('⚠️  Redis indisponível para geocoding', error.message);
+        console.warn('⚠️  Redis indisponível', error.message);
         redisAvailable = false;
       }
 
