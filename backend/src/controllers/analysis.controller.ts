@@ -141,42 +141,62 @@ export class AnalysisController {
    */
   async getQueueStatus(req: Request, res: Response) {
     try {
-      // Estatísticas das filas
-      const [
-        receitaWaiting,
-        receitaActive,
-        normalizationWaiting,
-        normalizationActive,
-        geocodingWaiting,
-        geocodingActive,
-        placesWaiting,
-        placesActive,
-        analysisWaiting,
-        analysisActive,
-        analysisCompleted,
-        analysisFailed,
-        tipologiaWaiting,
-        tipologiaActive,
-        tipologiaCompleted,
-        tipologiaFailed,
-      ] = await Promise.all([
-        receitaQueue.getWaitingCount(),
-        receitaQueue.getActiveCount(),
-        normalizationQueue.getWaitingCount(),
-        normalizationQueue.getActiveCount(),
-        geocodingQueue.getWaitingCount(),
-        geocodingQueue.getActiveCount(),
-        placesQueue.getWaitingCount(),
-        placesQueue.getActiveCount(),
-        analysisQueue.getWaitingCount(),
-        analysisQueue.getActiveCount(),
-        analysisQueue.getCompletedCount(),
-        analysisQueue.getFailedCount(),
-        tipologiaQueue.getWaitingCount(),
-        tipologiaQueue.getActiveCount(),
-        tipologiaQueue.getCompletedCount(),
-        tipologiaQueue.getFailedCount(),
-      ]);
+      // Tentar obter estatísticas das filas com timeout e fallback
+      let receitaWaiting = 0, receitaActive = 0;
+      let normalizationWaiting = 0, normalizationActive = 0;
+      let geocodingWaiting = 0, geocodingActive = 0;
+      let placesWaiting = 0, placesActive = 0;
+      let analysisWaiting = 0, analysisActive = 0, analysisCompleted = 0, analysisFailed = 0;
+      let tipologiaWaiting = 0, tipologiaActive = 0, tipologiaCompleted = 0, tipologiaFailed = 0;
+      let redisAvailable = true;
+
+      try {
+        // Timeout de 3 segundos para evitar 502
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Redis timeout')), 3000)
+        );
+
+        const queueStats = Promise.all([
+          receitaQueue.getWaitingCount(),
+          receitaQueue.getActiveCount(),
+          normalizationQueue.getWaitingCount(),
+          normalizationQueue.getActiveCount(),
+          geocodingQueue.getWaitingCount(),
+          geocodingQueue.getActiveCount(),
+          placesQueue.getWaitingCount(),
+          placesQueue.getActiveCount(),
+          analysisQueue.getWaitingCount(),
+          analysisQueue.getActiveCount(),
+          analysisQueue.getCompletedCount(),
+          analysisQueue.getFailedCount(),
+          tipologiaQueue.getWaitingCount(),
+          tipologiaQueue.getActiveCount(),
+          tipologiaQueue.getCompletedCount(),
+          tipologiaQueue.getFailedCount(),
+        ]);
+
+        [
+          receitaWaiting,
+          receitaActive,
+          normalizationWaiting,
+          normalizationActive,
+          geocodingWaiting,
+          geocodingActive,
+          placesWaiting,
+          placesActive,
+          analysisWaiting,
+          analysisActive,
+          analysisCompleted,
+          analysisFailed,
+          tipologiaWaiting,
+          tipologiaActive,
+          tipologiaCompleted,
+          tipologiaFailed,
+        ] = await Promise.race([queueStats, timeout]) as number[];
+      } catch (error: any) {
+        console.warn('⚠️  Redis indisponível, usando dados do banco de dados', error.message);
+        redisAvailable = false;
+      }
 
       // Estatísticas do banco
       const [
@@ -217,6 +237,7 @@ export class AnalysisController {
 
       return res.json({
         success: true,
+        redisAvailable,
         filas: {
           receita: {
             aguardando: receitaWaiting,
@@ -270,6 +291,9 @@ export class AnalysisController {
                 )
               : 0,
         },
+        ...(redisAvailable === false && {
+          warning: 'Redis indisponível. Dados de fila não estão atualizados em tempo real.',
+        }),
       });
     } catch (error: any) {
       console.error('Erro ao buscar status:', error);
