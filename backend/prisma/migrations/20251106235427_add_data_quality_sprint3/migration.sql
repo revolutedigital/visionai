@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "clientes" ADD COLUMN     "camposCriticos" TEXT,
+ADD COLUMN     "camposPreenchidos" INTEGER DEFAULT 0,
+ADD COLUMN     "confiabilidadeDados" TEXT DEFAULT 'BAIXA',
+ADD COLUMN     "dataQualityScore" INTEGER DEFAULT 0,
+ADD COLUMN     "fontesValidadas" TEXT,
+ADD COLUMN     "pontosFortes" TEXT,
+ADD COLUMN     "problemasRecorrentes" TEXT,
+ADD COLUMN     "reviews" TEXT,
+ADD COLUMN     "reviewsAnalisadas" INTEGER DEFAULT 0,
+ADD COLUMN     "scoreSentimento" DOUBLE PRECISION,
+ADD COLUMN     "sentimentoGeral" TEXT,
+ADD COLUMN     "tentativasEnriquecimento" INTEGER DEFAULT 0,
+ADD COLUMN     "ultimaAnaliseReviews" TIMESTAMP(3),
+ADD COLUMN     "ultimaValidacao" TIMESTAMP(3);

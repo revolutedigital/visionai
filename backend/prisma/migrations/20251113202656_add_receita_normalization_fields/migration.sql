@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "clientes" ADD COLUMN     "alteracoesNormalizacao" TEXT,
+ADD COLUMN     "atividadePrincipal" TEXT,
+ADD COLUMN     "cnpj" TEXT,
+ADD COLUMN     "dataAberturaReceita" TEXT,
+ADD COLUMN     "divergenciaEndereco" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "enderecoNormalizado" TEXT,
+ADD COLUMN     "enderecoReceita" TEXT,
+ADD COLUMN     "naturezaJuridica" TEXT,
+ADD COLUMN     "nomeFantasia" TEXT,
+ADD COLUMN     "razaoSocial" TEXT,
+ADD COLUMN     "receitaErro" TEXT,
+ADD COLUMN     "receitaProcessadoEm" TIMESTAMP(3),
+ADD COLUMN     "receitaStatus" TEXT NOT NULL DEFAULT 'PENDENTE',
+ADD COLUMN     "similaridadeEndereco" INTEGER,
+ADD COLUMN     "situacaoReceita" TEXT;

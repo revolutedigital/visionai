@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Banco de Dados Principal
+  postgres:
+    image: postgres:16-alpine
+    container_name: scampepisico-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: scampepisico
+      POSTGRES_PASSWORD: scampepisico123
+      POSTGRES_DB: scampepisico
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - scampepisico-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scampepisico"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Cache e Filas
+  redis:
+    image: redis:7-alpine
+    container_name: scampepisico-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis123
+    volumes:
+      - redis_data:/data
+    networks:
+      - scampepisico-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin (Opcional - Interface Web para PostgreSQL)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: scampepisico-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@scampepisico.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - scampepisico-network
+    depends_on:
+      - postgres
+
+# Volumes Persistentes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# Network
+networks:
+  scampepisico-network:
+    driver: bridge

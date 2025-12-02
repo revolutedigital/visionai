@@ -1,0 +1,47 @@
+import { memo } from 'react';
+// import { FixedSizeList as List } from 'react-window';
+
+interface VirtualizedListProps<T> {
+  items: T[];
+  height: number;
+  itemSize: number;
+  renderItem: (item: T, index: number) => React.ReactNode;
+  width?: string | number;
+  overscanCount?: number;
+}
+
+/**
+ * Lista virtualizada para renderizar grandes quantidades de itens
+ * sem perda de performance
+ *
+ * Apenas os itens visíveis + overscan são renderizados no DOM
+ */
+function VirtualizedListComponent<T>({
+  items,
+  height,
+  itemSize,
+  renderItem,
+  width = '100%',
+  overscanCount = 5,
+}: VirtualizedListProps<T>) {
+  return (
+    <List
+      height={height}
+      itemCount={items.length}
+      itemSize={itemSize}
+      width={width}
+      overscanCount={overscanCount}
+    >
+      {({ index, style }) => (
+        <div style={style} key={index}>
+          {renderItem(items[index], index)}
+        </div>
+      )}
+    </List>
+  );
+}
+
+// Memoizar para evitar rerenders desnecessários
+export const VirtualizedList = memo(
+  VirtualizedListComponent
+) as typeof VirtualizedListComponent;

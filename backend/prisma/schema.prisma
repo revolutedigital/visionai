@@ -1,0 +1,361 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo inicial para Fase 1
+model Planilha {
+  id          String   @id @default(uuid())
+  nomeArquivo String
+  uploadedAt  DateTime @default(now())
+  status      String   @default("PROCESSANDO") // PROCESSANDO, CONCLUIDO, ERRO
+  totalLinhas Int      @default(0)
+
+  clientes    Cliente[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("planilhas")
+}
+
+model Cliente {
+  id         String    @id @default(uuid())
+  planilhaId String
+  planilha   Planilha  @relation(fields: [planilhaId], references: [id], onDelete: Cascade)
+
+  // Dados da planilha RAC
+  nome        String
+  telefone    String?
+  endereco    String
+  cidade      String?
+  estado      String?
+  cep         String?
+  tipoServico String?
+  cnpj        String? // CNPJ do cliente
+
+  // Status do processamento
+  status String @default("PENDENTE") // PENDENTE, PROCESSANDO, CONCLUIDO, ERRO
+
+  // Receita Federal (Nova Fase 0 - antes de tudo)
+  receitaStatus         String    @default("PENDENTE") // PENDENTE, PROCESSANDO, SUCESSO, FALHA, NAO_APLICAVEL
+  receitaIniciadoEm     DateTime?
+  receitaProcessadoEm   DateTime?
+  receitaErro           String?
+  razaoSocial           String? // Nome oficial da empresa
+  nomeFantasia          String? // Nome fantasia (usado no Google)
+  enderecoReceita       String? // Endereço completo da Receita
+  situacaoReceita       String? // ATIVA, SUSPENSA, INAPTA, BAIXADA, etc
+  dataAberturaReceita   String?
+  naturezaJuridica      String?
+  atividadePrincipal    String?
+  divergenciaEndereco   Boolean   @default(false) // True se endereço planilha != Receita
+  similaridadeEndereco  Int?      // 0-100: percentual de similaridade
+
+  // Normalização de Endereço (Fase 0.5) - Etapa separada com IA
+  normalizacaoStatus      String    @default("PENDENTE") // PENDENTE, PROCESSANDO, SUCESSO, FALHA, FALHA_PARCIAL
+  normalizacaoProcessadoEm DateTime?
+  normalizacaoErro        String?
+  enderecoNormalizado     String? // Endereço com abreviações expandidas
+  cidadeNormalizada       String? // Cidade com acentos e nome completo
+  estadoNormalizado       String? // Estado em sigla (UF)
+  alteracoesNormalizacao  String? // JSON: lista de alterações feitas
+
+  // Geolocalização (Fase 3)
+  latitude              Float?
+  longitude             Float?
+  enderecoCompleto      String?
+  enderecoFormatado     String?
+  geocodingStatus       String    @default("PENDENTE") // PENDENTE, SUCESSO, FALHA
+  geocodingIniciadoEm   DateTime?
+  geocodingErro         String?
+  geocodingProcessadoEm DateTime?
+  placeId               String?
+
+  // Geo Validation Sprint 2
+  geoValidado            Boolean? // Se coordenadas passaram validação de bounding box
+  geoWithinState         Boolean? // Se está dentro do estado
+  geoWithinCity          Boolean? // Se está dentro da cidade (50km do centro)
+  geoDistanceToCenter    Float?   // Distância do centro da cidade em km
+
+  // Google Places (Fase 4)
+  placesStatus           String    @default("PENDENTE") // PENDENTE, PROCESSANDO, SUCESSO, FALHA
+  placesIniciadoEm       DateTime?
+  placesErro             String?
+  placesProcessadoEm     DateTime?
+
+  // Validação Cruzada (Nearby vs Text Search)
+  crossValidationConfianca    Int?     // 0-100% - Confiança na validação cruzada
+  crossValidationMetodo       String?  // 'nearby', 'text', 'ambos_iguais'
+  crossValidationDivergencias String?  // JSON - Lista de divergências encontradas
+  nearbyPlaceId              String?   // Place ID do Nearby Search
+  textPlaceId                String?   // Place ID do Text Search
+
+  // Vision AI - Geocoding Cross Validation Sprint 4
+  geocodingConfianca          Int?     // 0-100% - Confiança nas coordenadas
+  geocodingFonte              String?  // 'google', 'nominatim', 'places', 'consenso'
+  geocodingDivergenciaMaxima  Float?   // Distância máxima em metros entre fontes
+  geocodingDivergencias       String?  // JSON - Divergências detectadas
+
+  // Vision AI - Normalization Cross Validation Sprint 4
+  normalizacaoConfianca       Int?     // 0-100% - Confiança na normalização
+  normalizacaoFonte           String?  // 'ia', 'regex', 'consenso'
+  normalizacaoSimilaridade    Int?     // 0-100% - Similaridade IA vs Regex
+  normalizacaoAlucinacao      Boolean  @default(false) // IA alucinada detectada
+
+  // Vision AI - Universal Confidence Sprint 4
+  confiancaGeral              Int?     // 0-100% - Score geral Vision AI
+  confianciaCategoria         String?  // 'EXCELENTE', 'BOA', 'MÉDIA', 'BAIXA'
+  confiancaNivel              String?  // 'success', 'warning', 'danger'
+  necessitaRevisao            Boolean  @default(false) // Requer revisão manual
+  alertasVisionAI             String?  // JSON - Alertas do Vision AI
+  recomendacoesVisionAI       String?  // JSON - Recomendações
+
+  tipoEstabelecimento    String?
+  rating                 Float?
+  totalAvaliacoes        Int?
+  horarioFuncionamento   String? // JSON string
+  telefonePlace          String?
+  websitePlace           String?
+  website                String? // Website próprio encontrado
+  redesSociais           String? // JSON: {instagram, facebook, etc}
+  potencialScore         Int?
+  potencialCategoria     String? // BAIXO, MÉDIO, ALTO
+
+  // Scoring Breakdown (Sprint 1)
+  scoringBreakdown       String? // JSON with detailed scoring
+  scoreRating            Float?  // 0-15 pontos
+  scoreAvaliacoes        Float?  // 0-10 pontos
+  scoreFotosQualidade    Float?  // 0-15 pontos (IA)
+  scoreHorarioFunc       Float?  // 0-10 pontos
+  scoreWebsite           Float?  // 0-10 pontos
+  scoreDensidadeReviews  Float?  // 0-10 pontos
+
+  // Metrics Sprint 1
+  densidadeAvaliacoes    Float?  // avaliacoes por mes
+  tempoAbertoSemanal     Int?    // horas abertas por semana
+  diasAbertoPorSemana    Int?    // dias que abre na semana
+
+  // Fuzzy Matching Validation Sprint 1
+  placeNomeValidado           Boolean? // Se o nome do Place confere com cliente
+  placeNomeSimilaridade       Int?     // 0-100: similaridade do nome
+  placeEnderecoValidado       Boolean? // Se endereço do Place confere
+  placeEnderecoSimilaridade   Int?     // 0-100: similaridade do endereço
+
+  // Place Types & Photo References Sprint 2
+  placeTypes                  String?  // JSON array: tipos do estabelecimento do Google
+  placeTypesPrimario          String?  // Tipo primário (primeiro da lista)
+  totalFotosDisponiveis       Int?     // Total de fotos disponíveis no Place
+  photoReferences             String?  // JSON array: referências das fotos (não binário)
+
+  // Visual Analysis Sprint 2
+  qualidadeSinalizacao   String? // EXCELENTE, BOA, REGULAR, PRECARIA
+  presencaBranding       Boolean @default(false)
+  nivelProfissionalizacao String? // ALTO, MEDIO, BAIXO
+  publicoAlvo            String? // Descrição do público-alvo identificado
+  ambienteEstabelecimento String? // MODERNO, TRADICIONAL, RUSTICO, MINIMALISTA, etc
+  indicadoresVisuais     String? // JSON com indicadores visuais detalhados
+
+  // Data Quality Sprint 3
+  dataQualityScore       Int?    @default(0) // 0-100: Score de completude dos dados
+  camposPreenchidos      Int?    @default(0) // Quantidade de campos preenchidos
+  camposCriticos         String? // JSON: lista de campos críticos faltando
+  ultimaValidacao        DateTime?
+  confiabilidadeDados    String? @default("BAIXA") // BAIXA, MEDIA, ALTA, EXCELENTE
+  fontesValidadas        String? // JSON: quais fontes foram consultadas
+  tentativasEnriquecimento Int? @default(0)
+
+  // Enrichment Sprint 3+
+  enrichmentStatus       String  @default("PENDENTE") // PENDENTE, PROCESSANDO, CONCLUIDO, FALHA
+  enrichmentProcessadoEm DateTime?
+  enrichmentErro         String?
+
+  // Tipologia Sprint 3/4 (Worker separado)
+  tipologia                String? // Código Pepsi: F1, H3, G5, etc
+  tipologiaNome            String? // Nome legível: "AS + DE 50 CHECK-OUT", "PADARIA", etc
+  subTipologia             String? // Sub-categoria mais específica
+  tipologiaConfianca       Int?    // 0-100: confiança da classificação
+  tipologiaDivergente      Boolean @default(false) // IA × Places divergem
+  tipologiaJustificativa   String? @db.Text // Justificativa da IA para a classificação
+  tipologiaProcessadoEm    DateTime? // Quando foi classificado
+  tipologiaErro            String? // Erro ao classificar (se houver)
+  caracteristicasCliente   String? // JSON: lista de características
+  produtosSugeridos        String? // JSON: produtos Pepsi ideais
+  estrategiaComercial      String? // Estratégia sugerida para este cliente
+
+  // IA Analysis Cache Sprint 3
+  analysisPromptVersion  String? // Versão do prompt usado (ex: "v1.2.0")
+
+  // Reviews & Sentiment Sprint 3
+  reviews                String? // JSON: últimas 5-10 reviews mais relevantes
+  sentimentoGeral        String? // POSITIVO, NEUTRO, NEGATIVO, MISTO
+  scoreSentimento        Float?  // -1.0 a 1.0
+  problemasRecorrentes   String? // JSON: lista de problemas mencionados
+  pontosFortes           String? // JSON: elogios recorrentes
+  reviewsAnalisadas      Int?    @default(0)
+  ultimaAnaliseReviews   DateTime?
+
+  // Relacionamentos
+  fotos Foto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nome])
+  @@index([status])
+  @@index([planilhaId])
+  @@index([geocodingStatus])
+  @@index([placesStatus])
+  @@index([normalizacaoStatus])
+  @@index([potencialCategoria])
+  @@map("clientes")
+}
+
+// Histórico de Processamentos em Lote
+model ProcessamentoLote {
+  id            String   @id @default(uuid())
+  tipo          String   // RECEITA, GEOCODING, PLACES, ANALYSIS
+  iniciadoEm    DateTime @default(now())
+  finalizadoEm  DateTime?
+  status        String   // INICIADO, EM_PROGRESSO, CONCLUIDO, FALHOU
+  totalClientes Int
+  processados   Int      @default(0)
+  sucesso       Int      @default(0)
+  falhas        Int      @default(0)
+  observacoes   String?  // JSON: detalhes adicionais
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tipo])
+  @@index([iniciadoEm])
+  @@map("processamentos_lote")
+}
+
+// Logs Estruturados para Auditoria e Rastreabilidade
+model ProcessamentoLog {
+  id             String   @id @default(uuid())
+  correlationId  String   // ID para rastrear toda a jornada de um cliente
+  clienteId      String?  // ID do cliente sendo processado
+  loteId         String?  // ID do lote ao qual pertence
+  jobId          String?  // ID do job do Bull Queue
+
+  // Identificação
+  etapa          String   // RECEITA, GEOCODING, PLACES, ANALYSIS
+  operacao       String   // INICIO, PROCESSAMENTO, VALIDACAO, TRANSFORMACAO, CONCLUSAO, ERRO
+  nivel          String   // DEBUG, INFO, WARN, ERROR, FATAL
+
+  // Mensagem e Contexto
+  mensagem       String
+  detalhes       String?  // JSON: informações adicionais estruturadas
+
+  // Rastreabilidade de Dados
+  dadosEntrada   String?  // JSON: snapshot dos dados de entrada
+  dadosSaida     String?  // JSON: snapshot dos dados de saída
+  transformacoes String?  // JSON: lista de transformações aplicadas
+
+  // Performance
+  tempoExecucaoMs Int?    // Tempo de execução em milissegundos
+  timestamp      DateTime @default(now())
+
+  // Metadata
+  tentativa      Int      @default(1) // Número da tentativa (retry)
+  origem         String?  // Worker/Service que gerou o log
+  versao         String?  // Versão do sistema/worker
+
+  // Validações e Qualidade
+  validacoes     String?  // JSON: resultados de validações
+  alertas        String?  // JSON: alertas ou warnings
+
+  createdAt DateTime @default(now())
+
+  @@index([correlationId])
+  @@index([clienteId])
+  @@index([loteId])
+  @@index([etapa])
+  @@index([nivel])
+  @@index([timestamp])
+  @@index([operacao])
+  @@map("processamento_logs")
+}
+
+// Modelo para armazenar fotos do Google Places (Fase 4)
+model Foto {
+  id        String   @id @default(uuid())
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  // Dados da foto
+  fileName        String // Nome do arquivo no sistema
+  photoReference  String // Referência original do Google Places
+  url             String? // URL pública se houver CDN
+  ordem           Int     @default(0) // Ordem de exibição
+
+  // Photo Classification Sprint 3
+  fileHash                String? @unique // SHA256 hash para cache
+  photoCategory           String? // facade, interior, product, other
+  photoCategoryConfidence Float?  // 0-100: confiança da classificação
+
+  // Análise de IA (Fase 5)
+  analisadaPorIA  Boolean  @default(false)
+  analiseResultado String? // JSON com resultado da análise
+  analiseEm       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clienteId])
+  @@index([analisadaPorIA])
+  @@index([fileHash])
+  @@map("fotos")
+}
+
+// Cache de Análises IA (Sprint 3)
+model AnalysisCache {
+  id                  String   @id @default(uuid())
+  fileHash            String   @unique // SHA256 da imagem
+
+  // Resultado da análise
+  analiseResultado    String   @db.Text // JSON completo da análise
+  tipologia           String?  // Código Pepsi
+  tipologiaNome       String?  // Nome legível
+  confianca           Float?   // 0-100
+
+  // Metadata
+  promptVersion       String?  // Versão do prompt usado
+  modelUsed           String?  // claude-3-5-sonnet-20241022, etc
+
+  // Estatísticas de uso
+  timesUsed           Int      @default(1) // Quantas vezes foi reutilizado
+  lastUsed            DateTime @default(now())
+
+  createdAt           DateTime @default(now())
+
+  @@index([fileHash])
+  @@index([tipologia])
+  @@map("analysis_cache")
+}
+
+// Versionamento de Prompts (Sprint 3/4)
+model PromptVersion {
+  id              String   @id @default(uuid())
+  name            String   // "analysis-tipologia", "analysis-visual", etc
+  version         String   // "v1.0.0", "v1.1.0", etc
+  prompt          String   @db.Text
+  isActive        Boolean  @default(false)
+  description     String?  // Descrição das mudanças
+
+  createdAt       DateTime @default(now())
+  createdBy       String?  // Usuário que criou
+
+  @@unique([name, version])
+  @@index([name, isActive])
+  @@map("prompt_versions")
+}

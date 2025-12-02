@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "clientes" ADD COLUMN     "alertasVisionAI" TEXT,
+ADD COLUMN     "confiancaGeral" INTEGER,
+ADD COLUMN     "confiancaNivel" TEXT,
+ADD COLUMN     "confianciaCategoria" TEXT,
+ADD COLUMN     "geocodingConfianca" INTEGER,
+ADD COLUMN     "geocodingDivergenciaMaxima" DOUBLE PRECISION,
+ADD COLUMN     "geocodingDivergencias" TEXT,
+ADD COLUMN     "geocodingFonte" TEXT,
+ADD COLUMN     "necessitaRevisao" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "normalizacaoAlucinacao" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "normalizacaoConfianca" INTEGER,
+ADD COLUMN     "normalizacaoFonte" TEXT,
+ADD COLUMN     "normalizacaoSimilaridade" INTEGER,
+ADD COLUMN     "recomendacoesVisionAI" TEXT;
