@@ -130,12 +130,14 @@ export class PlacesController {
       let redisAvailable = true;
 
       try {
-        [waiting, active, completed, failed] = await Promise.all([
+        const results = await Promise.all([
           placesQueue.getWaitingCount().catch(() => 0),
           placesQueue.getActiveCount().catch(() => 0),
           placesQueue.getCompletedCount().catch(() => 0),
           placesQueue.getFailedCount().catch(() => 0),
         ]);
+        [waiting, active, completed, failed] = results;
+        if (results.every(r => r === 0)) redisAvailable = false;
       } catch (error: any) {
         console.warn('⚠️  Redis indisponível', error.message);
         redisAvailable = false;

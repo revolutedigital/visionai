@@ -152,24 +152,7 @@ export class AnalysisController {
 
       // Tentar queries Redis com fallback individual
       try {
-        [
-          receitaWaiting,
-          receitaActive,
-          normalizationWaiting,
-          normalizationActive,
-          geocodingWaiting,
-          geocodingActive,
-          placesWaiting,
-          placesActive,
-          analysisWaiting,
-          analysisActive,
-          analysisCompleted,
-          analysisFailed,
-          tipologiaWaiting,
-          tipologiaActive,
-          tipologiaCompleted,
-          tipologiaFailed,
-        ] = await Promise.all([
+        const results = await Promise.all([
           receitaQueue.getWaitingCount().catch(() => 0),
           receitaQueue.getActiveCount().catch(() => 0),
           normalizationQueue.getWaitingCount().catch(() => 0),
@@ -187,6 +170,30 @@ export class AnalysisController {
           tipologiaQueue.getCompletedCount().catch(() => 0),
           tipologiaQueue.getFailedCount().catch(() => 0),
         ]);
+
+        [
+          receitaWaiting,
+          receitaActive,
+          normalizationWaiting,
+          normalizationActive,
+          geocodingWaiting,
+          geocodingActive,
+          placesWaiting,
+          placesActive,
+          analysisWaiting,
+          analysisActive,
+          analysisCompleted,
+          analysisFailed,
+          tipologiaWaiting,
+          tipologiaActive,
+          tipologiaCompleted,
+          tipologiaFailed,
+        ] = results;
+
+        // Verificar se pelo menos uma consulta funcionou
+        if (results.every(r => r === 0)) {
+          redisAvailable = false;
+        }
       } catch (error: any) {
         console.warn('⚠️  Redis indisponível', error.message);
         redisAvailable = false;
@@ -290,10 +297,12 @@ export class AnalysisController {
         }),
       });
     } catch (error: any) {
-      console.error('Erro ao buscar status:', error);
+      console.error('❌ ERRO CRÍTICO ao buscar status:', error);
+      console.error('Stack trace:', error.stack);
       return res.status(500).json({
         success: false,
         error: 'Erro ao buscar status da fila',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   }
