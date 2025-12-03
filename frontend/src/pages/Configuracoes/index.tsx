@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../utils/api';
 
 interface SystemStats {
   clientes: {
@@ -45,7 +46,7 @@ export default function Configuracoes() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/admin/stats`);
+      const response = await authFetch(`${API_BASE_URL}/api/admin/stats`);
       const data = await response.json();
       if (data.success) {
         setStats(data.stats);
@@ -65,7 +66,7 @@ export default function Configuracoes() {
 
     try {
       setActionLoading('delete-clientes');
-      const response = await fetch(`${API_BASE_URL}/api/admin/clientes`, {
+      const response = await authFetch(`${API_BASE_URL}/api/admin/clientes`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -92,7 +93,7 @@ export default function Configuracoes() {
 
     try {
       setActionLoading('delete-planilhas');
-      const response = await fetch(`${API_BASE_URL}/api/admin/planilhas`, {
+      const response = await authFetch(`${API_BASE_URL}/api/admin/planilhas`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -119,7 +120,7 @@ export default function Configuracoes() {
 
     try {
       setActionLoading('clean-logs');
-      const response = await fetch(`${API_BASE_URL}/api/admin/logs?days=30`, {
+      const response = await authFetch(`${API_BASE_URL}/api/admin/logs?days=30`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -141,7 +142,7 @@ export default function Configuracoes() {
   const handleClearCache = async () => {
     try {
       setActionLoading('clear-cache');
-      const response = await fetch(`${API_BASE_URL}/api/admin/cache/clear`, {
+      const response = await authFetch(`${API_BASE_URL}/api/admin/cache/clear`, {
         method: 'POST',
       });
       const data = await response.json();
@@ -179,9 +180,8 @@ export default function Configuracoes() {
 
     try {
       setActionLoading('reset-system');
-      const response = await fetch(`${API_BASE_URL}/api/admin/reset`, {
+      const response = await authFetch(`${API_BASE_URL}/api/admin/reset`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirmPassword: 'RESET_SYSTEM_CONFIRM' }),
       });
       const data = await response.json();

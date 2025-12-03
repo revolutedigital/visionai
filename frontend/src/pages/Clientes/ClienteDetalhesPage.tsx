@@ -5,6 +5,7 @@ import { VisaoGeral } from './tabs/VisaoGeral';
 import { FotosTab } from './tabs/FotosTab';
 import { AnaliseIATab } from './tabs/AnaliseIATab';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../utils/api';
 
 type TabId = 'visao-geral' | 'fotos' | 'analise-ia' | 'historico';
 
@@ -62,7 +63,7 @@ export function ClienteDetalhesPage() {
 
   const loadCliente = async () => {
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `${API_BASE_URL}/api/analysis/${id}/resultado`
       );
       const data = await response.json();

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../config/api';
+import { authFetch } from '../utils/api';
 
 interface ProcessingStatus {
   geocoding: { total: number; processed: number; percentage: number };
@@ -42,10 +43,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshProcessingStatus = async () => {
     try {
       const [geocodingRes, placesRes, analysisRes, enrichmentRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/geocoding/status`),
-        fetch(`${API_BASE_URL}/api/places/status`),
-        fetch(`${API_BASE_URL}/api/analysis/status`),
-        fetch(`${API_BASE_URL}/api/enrichment/status`).catch(() => null),
+        authFetch(`${API_BASE_URL}/api/geocoding/status`),
+        authFetch(`${API_BASE_URL}/api/places/status`),
+        authFetch(`${API_BASE_URL}/api/analysis/status`),
+        authFetch(`${API_BASE_URL}/api/enrichment/status`).catch(() => null),
       ]);
 
       const [geocoding, places, analysis] = await Promise.all([

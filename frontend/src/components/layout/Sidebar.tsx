@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { authFetch } from '../../utils/api';
 import {
   LayoutDashboard,
   Users,
@@ -40,7 +41,7 @@ export function Sidebar() {
     // Buscar status da IA
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/analysis/status`);
+        const response = await authFetch(`${API_BASE_URL}/api/analysis/status`);
         const data = await response.json();
         if (data.success && data.filas) {
           // Somar todas as filas para ter o status geral
