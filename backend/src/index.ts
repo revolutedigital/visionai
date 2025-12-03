@@ -10,6 +10,8 @@ import dataQualityRoutes from './routes/data-quality.routes';
 import enrichmentRoutes from './routes/enrichment.routes';
 import tipologiaRoutes from './routes/tipologia.routes';
 import adminRoutes from './routes/admin.routes';
+import authRoutes from './routes/auth.routes';
+import { authMiddleware } from './middleware/auth.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 // Carregar variáveis de ambiente
@@ -124,15 +126,30 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Rotas da API
-app.use('/api/upload', uploadRoutes);
-app.use('/api/geocoding', geocodingRoutes);
-app.use('/api/places', placesRoutes);
-app.use('/api/analysis', analysisRoutes);
-app.use('/api/data-quality', dataQualityRoutes);
-app.use('/api/enrichment', enrichmentRoutes);
-app.use('/api/tipologia', tipologiaRoutes);
-app.use('/api/admin', adminRoutes);
+// Rotas públicas (sem autenticação)
+app.use('/api/auth', authRoutes);
+
+// Rotas protegidas (requerem autenticação em produção)
+const protectedRouter = express.Router();
+
+// Em produção, aplicar middleware de auth em todas as rotas
+if (process.env.NODE_ENV === 'production') {
+  protectedRouter.use(authMiddleware);
+  console.log('🔐 Autenticação JWT ativada em produção');
+} else {
+  console.log('⚠️  Autenticação desativada em desenvolvimento');
+}
+
+protectedRouter.use('/upload', uploadRoutes);
+protectedRouter.use('/geocoding', geocodingRoutes);
+protectedRouter.use('/places', placesRoutes);
+protectedRouter.use('/analysis', analysisRoutes);
+protectedRouter.use('/data-quality', dataQualityRoutes);
+protectedRouter.use('/enrichment', enrichmentRoutes);
+protectedRouter.use('/tipologia', tipologiaRoutes);
+protectedRouter.use('/admin', adminRoutes);
+
+app.use('/api', protectedRouter);
 
 // Error handling middlewares (must be AFTER all routes)
 app.use(notFoundHandler);

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -8,6 +9,8 @@ import {
   Upload,
   Settings,
   Sparkles,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { VisionAILogo } from '../branding/VisionAILogo';
 
@@ -26,6 +29,7 @@ interface AIStatus {
 }
 
 export function Sidebar() {
+  const { user, logout } = useAuth();
   const [aiStatus, setAiStatus] = useState<AIStatus>({
     isProcessing: false,
     waiting: 0,
@@ -106,7 +110,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* AI Status */}
       <div className="p-4 border-t border-indigo-800/30 bg-slate-900/50 backdrop-blur-sm">
         <div className="px-4 py-3 bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-lg border border-indigo-700/30">
           <div className="flex items-center justify-between">
@@ -132,6 +136,28 @@ export function Sidebar() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* User Footer */}
+      <div className="p-4 border-t border-indigo-800/30 bg-slate-900/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center min-w-0">
+            <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name || 'Usuario'}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
+            title="Sair"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>

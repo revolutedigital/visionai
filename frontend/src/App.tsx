@@ -2,12 +2,15 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { Skeleton } from './components/Skeleton';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useWebVitals } from './hooks/useWebVitals';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load de todas as páginas para Code Splitting
+const LoginPage = lazy(() => import('./pages/Login'));
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const ClientesPage = lazy(() => import('./pages/Clientes'));
 const ClienteDetalhesPage = lazy(() => import('./pages/Clientes/ClienteDetalhesPage'));
@@ -31,64 +34,84 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <BrowserRouter>
-          <Toaster position="top-right" />
-          <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route
-              index
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <DashboardPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="clientes"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ClientesPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="clientes/:id"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ClienteDetalhesPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="pipeline"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <PipelinePage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="upload"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <UploadPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="configuracoes"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ConfiguracoesPage />
-                </Suspense>
-              }
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-          </Routes>
-        </BrowserRouter>
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <BrowserRouter>
+            <Toaster position="top-right" />
+            <Routes>
+              {/* Rota de login (pública) */}
+              <Route
+                path="/login"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <LoginPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Rotas protegidas */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <DashboardPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="clientes"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ClientesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="clientes/:id"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ClienteDetalhesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="pipeline"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PipelinePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="upload"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <UploadPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="configuracoes"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ConfiguracoesPage />
+                    </Suspense>
+                  }
+                />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AppProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
@@ -99,7 +122,7 @@ function NotFoundPage() {
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-md p-12 text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-        <p className="text-gray-600 mb-6">Página não encontrada</p>
+        <p className="text-gray-600 mb-6">Pagina nao encontrada</p>
         <a
           href="/"
           className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold"
