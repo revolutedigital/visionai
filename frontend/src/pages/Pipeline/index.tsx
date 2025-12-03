@@ -5,8 +5,6 @@ import {
   MapPin,
   Image,
   Brain,
-  Instagram,
-  Facebook,
   Globe,
   Tags,
   Activity,
@@ -1088,52 +1086,6 @@ export function PipelinePage() {
         </div>
       </div>
 
-      {/* Fase 2: Enrichment Multifonte - Pendente de Implantação */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <Tags className="w-6 h-6 mr-2 text-gray-400" />
-              Fase 2: Enrichment Multifonte
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Coleta de dados adicionais em múltiplas plataformas
-            </p>
-          </div>
-          <span className="px-4 py-2 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-full text-sm font-medium">
-            Pendente de Implantação
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Instagram */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center opacity-60">
-            <Instagram className="w-12 h-12 text-pink-400 mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-700 mb-1">Instagram</h3>
-            <p className="text-xs text-gray-500">Engajamento, posts, seguidores</p>
-          </div>
-
-          {/* Facebook */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center opacity-60">
-            <Facebook className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-700 mb-1">Facebook</h3>
-            <p className="text-xs text-gray-500">Reviews, check-ins, curtidas</p>
-          </div>
-
-          {/* Website Scraping */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center opacity-60">
-            <Globe className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-700 mb-1">Website</h3>
-            <p className="text-xs text-gray-500">Cardápio, promoções, contato</p>
-          </div>
-        </div>
-
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            <strong>Em desenvolvimento:</strong> Estas funcionalidades serão implementadas em uma próxima fase do projeto.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
