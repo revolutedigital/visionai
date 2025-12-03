@@ -6,6 +6,8 @@ import { ReceitaService } from '../services/receita.service';
 const prisma = new PrismaClient();
 const receitaService = new ReceitaService();
 
+console.log('👷 Worker de Receita Federal iniciado');
+
 interface ReceitaJobData {
   clienteId: string;
   loteId?: string;

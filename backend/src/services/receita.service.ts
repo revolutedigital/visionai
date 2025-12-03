@@ -147,7 +147,7 @@ export class ReceitaService {
 
   /**
    * Compara dois endereços e retorna se são similares
-   * Normaliza e compara desconsiderando acentos, case e pontuação
+   * Normaliza e compara desconsiderando acentos, case, pontuação e abreviações
    */
   compararEnderecos(endereco1: string, endereco2: string): {
     similar: boolean;
@@ -155,29 +155,96 @@ export class ReceitaService {
     endereco1Normalizado: string;
     endereco2Normalizado: string;
   } {
+    // Mapa de abreviações comuns para expansão
+    const abreviacoes: { [key: string]: string } = {
+      'r': 'rua',
+      'av': 'avenida',
+      'al': 'alameda',
+      'pc': 'praca',
+      'pca': 'praca',
+      'tv': 'travessa',
+      'rod': 'rodovia',
+      'estr': 'estrada',
+      'sl': 'sala',
+      'cj': 'conjunto',
+      'apt': 'apartamento',
+      'apto': 'apartamento',
+      'ap': 'apartamento',
+      'lt': 'lote',
+      'qd': 'quadra',
+      'bl': 'bloco',
+      'ed': 'edificio',
+      'lj': 'loja',
+      'gal': 'galeria',
+      'cond': 'condominio',
+      'res': 'residencial',
+      'jd': 'jardim',
+      'vl': 'vila',
+      'pq': 'parque',
+      'ctr': 'centro',
+      'ste': 'setor',
+      'st': 'setor',
+      'n': 'numero',
+      'nr': 'numero',
+      'sn': 'sem numero',
+      's/n': 'sem numero',
+    };
+
+    // Palavras a ignorar na comparação (muito comuns/genéricas)
+    const palavrasIgnorar = new Set([
+      'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos',
+      'cep', 'br', 'brasil', 'numero', 'sem',
+    ]);
+
+    // Estados brasileiros (ignorar na comparação)
+    const estados = new Set([
+      'ac', 'al', 'ap', 'am', 'ba', 'ce', 'df', 'es', 'go', 'ma', 'mt', 'ms',
+      'mg', 'pa', 'pb', 'pr', 'pe', 'pi', 'rj', 'rn', 'rs', 'ro', 'rr', 'sc',
+      'sp', 'se', 'to',
+    ]);
+
     // Normalizar endereços
     const normalizar = (texto: string): string => {
-      return texto
+      let normalizado = texto
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // Remover acentos
-        .replace(/[^\w\s]/g, '') // Remover pontuação
+        .replace(/[^\w\s]/g, ' ') // Substituir pontuação por espaço
         .replace(/\s+/g, ' ') // Normalizar espaços
         .trim();
+
+      // Expandir abreviações
+      const palavras = normalizado.split(' ');
+      const palavrasExpandidas = palavras.map(p => abreviacoes[p] || p);
+
+      return palavrasExpandidas.join(' ');
     };
 
     const end1 = normalizar(endereco1);
     const end2 = normalizar(endereco2);
 
-    // Comparação simples por palavras em comum
-    const palavras1 = end1.split(' ').filter((p) => p.length > 2);
-    const palavras2 = end2.split(' ').filter((p) => p.length > 2);
+    // Filtrar palavras significativas
+    const filtrarPalavras = (texto: string): string[] => {
+      return texto.split(' ')
+        .filter(p => p.length > 1) // Mínimo 2 caracteres
+        .filter(p => !palavrasIgnorar.has(p)) // Não está na lista de ignorar
+        .filter(p => !estados.has(p)) // Não é estado
+        .filter(p => !/^\d{5,}$/.test(p)); // Não é CEP (5+ dígitos)
+    };
 
-    const palavrasComuns = palavras1.filter((p) => palavras2.includes(p));
-    const similarity = palavrasComuns.length / Math.max(palavras1.length, palavras2.length);
+    const palavras1 = filtrarPalavras(end1);
+    const palavras2 = filtrarPalavras(end2);
 
-    // Considerar similar se > 50% das palavras são comuns
-    const similar = similarity >= 0.5;
+    // Contar palavras em comum
+    const palavrasComuns = palavras1.filter(p => palavras2.includes(p));
+
+    // Usar o MENOR conjunto como base (planilha geralmente tem menos dados)
+    const baseComparacao = Math.min(palavras1.length, palavras2.length);
+    const similarity = baseComparacao > 0 ? palavrasComuns.length / baseComparacao : 0;
+
+    // Considerar similar se >= 60% das palavras do menor conjunto são comuns
+    // OU se encontrou pelo menos 3 palavras em comum (endereços curtos)
+    const similar = similarity >= 0.6 || palavrasComuns.length >= 3;
 
     return {
       similar,
