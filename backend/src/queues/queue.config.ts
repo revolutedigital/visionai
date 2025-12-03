@@ -9,228 +9,273 @@ console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
 const REDIS_DISABLED = !process.env.REDIS_URL && process.env.NODE_ENV === 'production';
 
 if (REDIS_DISABLED) {
-  console.warn('⚠️  MODO SEM REDIS: Filas desabilitadas em produção sem REDIS_URL');
+  console.warn('⚠️  MODO SEM REDIS: Filas completamente desabilitadas em produção sem REDIS_URL');
+  console.warn('⚠️  Exportando mocks para todas as filas - nenhuma conexão será tentada');
 }
 
-// Configuração do Redis - suporta REDIS_URL do Railway ou config individual
-const redisConfig = process.env.REDIS_URL
-  ? {
-      // Railway Redis URL
-      url: process.env.REDIS_URL,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-      // Timeouts agressivos para evitar travar
-      connectTimeout: 5000,
-      commandTimeout: 5000,
-      lazyConnect: true, // Não conectar imediatamente
-      // TLS pode ser necessário no Railway
-      tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
-    }
-  : {
-      // Config local
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-      lazyConnect: true, // Não conectar imediatamente
-    };
-
-console.log('📦 Configuração Redis:', process.env.REDIS_URL ? 'Usando REDIS_URL' : `Usando ${redisConfig.host}:${redisConfig.port}`);
-
-// Criar client Redis para o Bull (ou mock se Redis desabilitado)
-const createRedisClient = (type: 'client' | 'subscriber' | 'bclient') => {
-  if (REDIS_DISABLED) {
-    // Mock Redis client que não conecta
-    return {
-      connect: () => Promise.resolve(),
-      disconnect: () => Promise.resolve(),
-      on: () => {},
-      once: () => {},
-      removeAllListeners: () => {},
-    } as any;
-  }
-  return new Redis(redisConfig);
+// Mock queue que não faz nada
+const createMockQueue = (name: string): any => {
+  console.log(`📦 Mock ${name} queue criado (sem Redis)`);
+  return {
+    name,
+    // Métodos que os workers podem chamar
+    add: () => Promise.resolve({ id: 'mock', data: {} }),
+    process: () => {},
+    on: () => {},
+    once: () => {},
+    removeAllListeners: () => {},
+    close: () => Promise.resolve(),
+    clean: () => Promise.resolve([]),
+    empty: () => Promise.resolve(),
+    pause: () => Promise.resolve(),
+    resume: () => Promise.resolve(),
+    count: () => Promise.resolve(0),
+    getJob: () => Promise.resolve(null),
+    getJobs: () => Promise.resolve([]),
+    getWaiting: () => Promise.resolve([]),
+    getWaitingCount: () => Promise.resolve(0),
+    getActive: () => Promise.resolve([]),
+    getActiveCount: () => Promise.resolve(0),
+    getCompleted: () => Promise.resolve([]),
+    getCompletedCount: () => Promise.resolve(0),
+    getFailed: () => Promise.resolve([]),
+    getFailedCount: () => Promise.resolve(0),
+    getDelayed: () => Promise.resolve([]),
+    getDelayedCount: () => Promise.resolve(0),
+    getJobCounts: () => Promise.resolve({
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+    }),
+  };
 };
 
-// Opções padrão para as filas
-const defaultJobOptions = {
-  attempts: 3,
-  backoff: {
-    type: 'exponential',
-    delay: 2000,
-  },
-  removeOnComplete: 500, // Manter últimos 500 jobs completados
-  removeOnFail: 500, // Manter últimos 500 jobs falhados
-};
+// Variáveis que serão exportadas
+let geocodingQueue: any;
+let receitaQueue: any;
+let normalizationQueue: any;
+let placesQueue: any;
+let analysisQueue: any;
+let tipologiaQueue: any;
 
-// Fila de Geocodificação
-export const geocodingQueue = new Queue('geocoding', {
-  createClient: createRedisClient,
-  defaultJobOptions,
-});
+// Se Redis desabilitado, criar mocks
+if (REDIS_DISABLED) {
+  geocodingQueue = createMockQueue('geocoding');
+  receitaQueue = createMockQueue('receita');
+  normalizationQueue = createMockQueue('normalization');
+  placesQueue = createMockQueue('places');
+  analysisQueue = createMockQueue('analysis');
+  tipologiaQueue = createMockQueue('tipologia');
+} else {
+  // Código normal com Redis REAL
+  console.log('📦 Inicializando filas com Redis REAL');
 
-// Log de eventos da fila
-geocodingQueue.on('completed', (job, result) => {
-  console.log(`✅ Job ${job.id} completado:`, result);
-});
+  // Configuração do Redis - suporta REDIS_URL do Railway ou config individual
+  const redisConfig = process.env.REDIS_URL
+    ? {
+        // Railway Redis URL
+        url: process.env.REDIS_URL,
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+        connectTimeout: 5000,
+        commandTimeout: 5000,
+        lazyConnect: true,
+        tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
+      }
+    : {
+        // Config local
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+        lazyConnect: true,
+      };
 
-geocodingQueue.on('failed', (job, err) => {
-  console.error(`❌ Job ${job?.id} falhou:`, err.message);
-});
+  console.log('📦 Configuração Redis:', process.env.REDIS_URL ? 'Usando REDIS_URL' : `Usando ${redisConfig.host}:${redisConfig.port}`);
 
-geocodingQueue.on('error', (error) => {
-  console.error('❌ Erro na fila:', error);
-});
+  // Criar client Redis para o Bull
+  const createRedisClient = (type: 'client' | 'subscriber' | 'bclient') => {
+    return new Redis(redisConfig);
+  };
 
-geocodingQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Job ${jobId} aguardando processamento`);
-});
+  // Opções padrão para as filas
+  const defaultJobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    removeOnComplete: 500,
+    removeOnFail: 500,
+  };
 
-console.log('📦 Fila de Geocodificação configurada');
+  // Fila de Geocodificação
+  geocodingQueue = new Queue('geocoding', {
+    createClient: createRedisClient,
+    defaultJobOptions,
+  });
 
-// Fila de Receita Federal e Normalização
-export const receitaQueue = new Queue('receita', {
-  createClient: createRedisClient,
-  defaultJobOptions: {
-    ...defaultJobOptions,
-    attempts: 2, // Menos tentativas pois API tem rate limit
-    timeout: 60000, // 1 minuto timeout
-  },
-});
+  geocodingQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Job ${job.id} completado:`, result);
+  });
 
-// Log de eventos da fila Receita
-receitaQueue.on('completed', (job, result) => {
-  console.log(`✅ Receita Job ${job.id} completado:`, result);
-});
+  geocodingQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Job ${job?.id} falhou:`, err.message);
+  });
 
-receitaQueue.on('failed', (job, err) => {
-  console.error(`❌ Receita Job ${job?.id} falhou:`, err.message);
-});
+  geocodingQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila:', error);
+  });
 
-receitaQueue.on('error', (error) => {
-  console.error('❌ Erro na fila Receita:', error);
-});
+  geocodingQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Job ${jobId} aguardando processamento`);
+  });
 
-receitaQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Receita Job ${jobId} aguardando processamento`);
-});
+  console.log('📦 Fila de Geocodificação configurada');
 
-console.log('📦 Fila de Receita Federal configurada');
+  // Fila de Receita Federal e Normalização
+  receitaQueue = new Queue('receita', {
+    createClient: createRedisClient,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 2,
+      timeout: 60000,
+    },
+  });
 
-// Fila de Normalização (entre Receita e Geocoding)
-export const normalizationQueue = new Queue('normalization', {
-  createClient: createRedisClient,
-  defaultJobOptions: {
-    ...defaultJobOptions,
-    attempts: 2,
-    timeout: 30000, // 30 segundos timeout (IA é rápida)
-  },
-});
+  receitaQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Receita Job ${job.id} completado:`, result);
+  });
 
-// Log de eventos da fila Normalização
-normalizationQueue.on('completed', (job, result) => {
-  console.log(`✅ Normalization Job ${job.id} completado:`, result);
-});
+  receitaQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Receita Job ${job?.id} falhou:`, err.message);
+  });
 
-normalizationQueue.on('failed', (job, err) => {
-  console.error(`❌ Normalization Job ${job?.id} falhou:`, err.message);
-});
+  receitaQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila Receita:', error);
+  });
 
-normalizationQueue.on('error', (error) => {
-  console.error('❌ Erro na fila Normalization:', error);
-});
+  receitaQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Receita Job ${jobId} aguardando processamento`);
+  });
 
-normalizationQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Normalization Job ${jobId} aguardando processamento`);
-});
+  console.log('📦 Fila de Receita Federal configurada');
 
-console.log('📦 Fila de Normalização configurada');
+  // Fila de Normalização (entre Receita e Geocoding)
+  normalizationQueue = new Queue('normalization', {
+    createClient: createRedisClient,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 2,
+      timeout: 30000,
+    },
+  });
 
-// Fila de Google Places
-export const placesQueue = new Queue('places', {
-  createClient: createRedisClient,
-  defaultJobOptions: {
-    ...defaultJobOptions,
-    attempts: 2, // Menos tentativas pois API tem custo
-  },
-});
+  normalizationQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Normalization Job ${job.id} completado:`, result);
+  });
 
-// Log de eventos da fila Places
-placesQueue.on('completed', (job, result) => {
-  console.log(`✅ Places Job ${job.id} completado:`, result);
-});
+  normalizationQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Normalization Job ${job?.id} falhou:`, err.message);
+  });
 
-placesQueue.on('failed', (job, err) => {
-  console.error(`❌ Places Job ${job?.id} falhou:`, err.message);
-});
+  normalizationQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila Normalization:', error);
+  });
 
-placesQueue.on('error', (error) => {
-  console.error('❌ Erro na fila Places:', error);
-});
+  normalizationQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Normalization Job ${jobId} aguardando processamento`);
+  });
 
-placesQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Places Job ${jobId} aguardando processamento`);
-});
+  console.log('📦 Fila de Normalização configurada');
 
-console.log('📦 Fila de Google Places configurada');
+  // Fila de Google Places
+  placesQueue = new Queue('places', {
+    createClient: createRedisClient,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 2,
+    },
+  });
 
-// Fila de Análise de IA
-export const analysisQueue = new Queue('analysis', {
-  createClient: createRedisClient,
-  defaultJobOptions: {
-    ...defaultJobOptions,
-    attempts: 2, // Menos tentativas pois tem custo alto
-    timeout: 120000, // 2 minutos timeout
-  },
-});
+  placesQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Places Job ${job.id} completado:`, result);
+  });
 
-// Log de eventos da fila Analysis
-analysisQueue.on('completed', (job, result) => {
-  console.log(`✅ Analysis Job ${job.id} completado:`, result);
-});
+  placesQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Places Job ${job?.id} falhou:`, err.message);
+  });
 
-analysisQueue.on('failed', (job, err) => {
-  console.error(`❌ Analysis Job ${job?.id} falhou:`, err.message);
-});
+  placesQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila Places:', error);
+  });
 
-analysisQueue.on('error', (error) => {
-  console.error('❌ Erro na fila Analysis:', error);
-});
+  placesQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Places Job ${jobId} aguardando processamento`);
+  });
 
-analysisQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Analysis Job ${jobId} aguardando processamento`);
-});
+  console.log('📦 Fila de Google Places configurada');
 
-console.log('📦 Fila de Análise de IA configurada');
+  // Fila de Análise de IA
+  analysisQueue = new Queue('analysis', {
+    createClient: createRedisClient,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 2,
+      timeout: 120000,
+    },
+  });
 
-// Fila de Tipologia (após análise de fotos)
-export const tipologiaQueue = new Queue('tipologia', {
-  createClient: createRedisClient,
-  defaultJobOptions: {
-    ...defaultJobOptions,
-    attempts: 2,
-    timeout: 60000, // 1 minuto timeout (agente IA)
-  },
-});
+  analysisQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Analysis Job ${job.id} completado:`, result);
+  });
 
-// Log de eventos da fila Tipologia
-tipologiaQueue.on('completed', (job, result) => {
-  console.log(`✅ Tipologia Job ${job.id} completado:`, result);
-});
+  analysisQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Analysis Job ${job?.id} falhou:`, err.message);
+  });
 
-tipologiaQueue.on('failed', (job, err) => {
-  console.error(`❌ Tipologia Job ${job?.id} falhou:`, err.message);
-});
+  analysisQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila Analysis:', error);
+  });
 
-tipologiaQueue.on('error', (error) => {
-  console.error('❌ Erro na fila Tipologia:', error);
-});
+  analysisQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Analysis Job ${jobId} aguardando processamento`);
+  });
 
-tipologiaQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Tipologia Job ${jobId} aguardando processamento`);
-});
+  console.log('📦 Fila de Análise de IA configurada');
 
-console.log('📦 Fila de Tipologia configurada');
+  // Fila de Tipologia (após análise de fotos)
+  tipologiaQueue = new Queue('tipologia', {
+    createClient: createRedisClient,
+    defaultJobOptions: {
+      ...defaultJobOptions,
+      attempts: 2,
+      timeout: 60000,
+    },
+  });
 
+  tipologiaQueue.on('completed', (job: any, result: any) => {
+    console.log(`✅ Tipologia Job ${job.id} completado:`, result);
+  });
+
+  tipologiaQueue.on('failed', (job: any, err: any) => {
+    console.error(`❌ Tipologia Job ${job?.id} falhou:`, err.message);
+  });
+
+  tipologiaQueue.on('error', (error: any) => {
+    console.error('❌ Erro na fila Tipologia:', error);
+  });
+
+  tipologiaQueue.on('waiting', (jobId: any) => {
+    console.log(`⏳ Tipologia Job ${jobId} aguardando processamento`);
+  });
+
+  console.log('📦 Fila de Tipologia configurada');
+}
+
+// Exports
+export { geocodingQueue, receitaQueue, normalizationQueue, placesQueue, analysisQueue, tipologiaQueue };
 export default geocodingQueue;
