@@ -158,23 +158,26 @@ export class AnalysisController {
         // Tentar queries Redis com fallback individual
         try {
           const results = await Promise.all([
-            receitaQueue.getWaitingCount().catch(() => 0),
-            receitaQueue.getActiveCount().catch(() => 0),
-            normalizationQueue.getWaitingCount().catch(() => 0),
-            normalizationQueue.getActiveCount().catch(() => 0),
-            geocodingQueue.getWaitingCount().catch(() => 0),
-            geocodingQueue.getActiveCount().catch(() => 0),
-            placesQueue.getWaitingCount().catch(() => 0),
-            placesQueue.getActiveCount().catch(() => 0),
-            analysisQueue.getWaitingCount().catch(() => 0),
-            analysisQueue.getActiveCount().catch(() => 0),
-            analysisQueue.getCompletedCount().catch(() => 0),
-            analysisQueue.getFailedCount().catch(() => 0),
-            tipologiaQueue.getWaitingCount().catch(() => 0),
-            tipologiaQueue.getActiveCount().catch(() => 0),
-            tipologiaQueue.getCompletedCount().catch(() => 0),
-            tipologiaQueue.getFailedCount().catch(() => 0),
+            receitaQueue.getWaitingCount().catch(() => -1),
+            receitaQueue.getActiveCount().catch(() => -1),
+            normalizationQueue.getWaitingCount().catch(() => -1),
+            normalizationQueue.getActiveCount().catch(() => -1),
+            geocodingQueue.getWaitingCount().catch(() => -1),
+            geocodingQueue.getActiveCount().catch(() => -1),
+            placesQueue.getWaitingCount().catch(() => -1),
+            placesQueue.getActiveCount().catch(() => -1),
+            analysisQueue.getWaitingCount().catch(() => -1),
+            analysisQueue.getActiveCount().catch(() => -1),
+            analysisQueue.getCompletedCount().catch(() => -1),
+            analysisQueue.getFailedCount().catch(() => -1),
+            tipologiaQueue.getWaitingCount().catch(() => -1),
+            tipologiaQueue.getActiveCount().catch(() => -1),
+            tipologiaQueue.getCompletedCount().catch(() => -1),
+            tipologiaQueue.getFailedCount().catch(() => -1),
           ]);
+
+          // Converter -1 (erro) para 0 para exibição
+          const sanitized = results.map(r => r === -1 ? 0 : r);
 
           [
             receitaWaiting,
@@ -193,12 +196,11 @@ export class AnalysisController {
             tipologiaActive,
             tipologiaCompleted,
             tipologiaFailed,
-          ] = results;
+          ] = sanitized;
 
-          // Verificar se pelo menos uma consulta funcionou
-          if (results.every(r => r === 0)) {
-            redisAvailable = false;
-          }
+          // Redis está disponível se PELO MENOS UMA consulta não retornou -1
+          // (0 é um valor válido - significa fila vazia, não erro)
+          redisAvailable = results.some(r => r !== -1);
         } catch (error: any) {
           console.warn('⚠️  Redis indisponível', error.message);
           redisAvailable = false;
