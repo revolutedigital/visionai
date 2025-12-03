@@ -5,6 +5,13 @@ import Redis from 'ioredis';
 console.log('🔍 REDIS_URL:', process.env.REDIS_URL ? 'DEFINIDO' : 'UNDEFINED');
 console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
 
+// CRITICAL: Se não tiver REDIS_URL em produção, NÃO tentar conectar
+const REDIS_DISABLED = !process.env.REDIS_URL && process.env.NODE_ENV === 'production';
+
+if (REDIS_DISABLED) {
+  console.warn('⚠️  MODO SEM REDIS: Filas desabilitadas em produção sem REDIS_URL');
+}
+
 // Configuração do Redis - suporta REDIS_URL do Railway ou config individual
 const redisConfig = process.env.REDIS_URL
   ? {
@@ -31,8 +38,18 @@ const redisConfig = process.env.REDIS_URL
 
 console.log('📦 Configuração Redis:', process.env.REDIS_URL ? 'Usando REDIS_URL' : `Usando ${redisConfig.host}:${redisConfig.port}`);
 
-// Criar client Redis para o Bull
+// Criar client Redis para o Bull (ou mock se Redis desabilitado)
 const createRedisClient = (type: 'client' | 'subscriber' | 'bclient') => {
+  if (REDIS_DISABLED) {
+    // Mock Redis client que não conecta
+    return {
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      on: () => {},
+      once: () => {},
+      removeAllListeners: () => {},
+    } as any;
+  }
   return new Redis(redisConfig);
 };
 

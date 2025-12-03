@@ -5,10 +5,19 @@ import Redis from 'ioredis';
  * Implementa caching inteligente para APIs externas com TTL configurável
  */
 export class CacheService {
-  private redis: Redis;
+  private redis: Redis | null;
   private defaultTTL: number = 60 * 60 * 24 * 30; // 30 dias (dados da Receita são estáveis)
+  private disabled: boolean = false;
 
   constructor() {
+    // CRITICAL: Se não tiver REDIS_URL em produção, NÃO tentar conectar
+    if (!process.env.REDIS_URL && process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Cache desabilitado: sem REDIS_URL em produção');
+      this.redis = null;
+      this.disabled = true;
+      return;
+    }
+
     // Suporta REDIS_URL do Railway ou config individual
     const redisConfig = process.env.REDIS_URL
       ? {
@@ -59,6 +68,8 @@ export class CacheService {
    * Buscar no cache
    */
   async get<T>(prefix: string, identifier: string): Promise<T | null> {
+    if (this.disabled || !this.redis) return null;
+
     try {
       const key = this.generateKey(prefix, identifier);
       const cached = await this.redis.get(key);
@@ -86,6 +97,8 @@ export class CacheService {
     data: T,
     ttl?: number
   ): Promise<void> {
+    if (this.disabled || !this.redis) return;
+
     try {
       const key = this.generateKey(prefix, identifier);
       const serialized = JSON.stringify(data);
@@ -102,6 +115,8 @@ export class CacheService {
    * Invalidar cache específico
    */
   async invalidate(prefix: string, identifier: string): Promise<void> {
+    if (this.disabled || !this.redis) return;
+
     try {
       const key = this.generateKey(prefix, identifier);
       await this.redis.del(key);
@@ -115,6 +130,8 @@ export class CacheService {
    * Invalidar todos os caches de um prefixo
    */
   async invalidatePrefix(prefix: string): Promise<void> {
+    if (this.disabled || !this.redis) return;
+
     try {
       const pattern = `${prefix}:*`;
       const keys = await this.redis.keys(pattern);
@@ -132,6 +149,8 @@ export class CacheService {
    * Verificar se existe no cache
    */
   async exists(prefix: string, identifier: string): Promise<boolean> {
+    if (this.disabled || !this.redis) return false;
+
     try {
       const key = this.generateKey(prefix, identifier);
       const result = await this.redis.exists(key);
@@ -146,6 +165,8 @@ export class CacheService {
    * Obter TTL restante de uma chave
    */
   async getTTL(prefix: string, identifier: string): Promise<number> {
+    if (this.disabled || !this.redis) return -1;
+
     try {
       const key = this.generateKey(prefix, identifier);
       return await this.redis.ttl(key);
@@ -163,6 +184,13 @@ export class CacheService {
     memoryUsed: string;
     hitRate?: number;
   }> {
+    if (this.disabled || !this.redis) {
+      return {
+        totalKeys: 0,
+        memoryUsed: 'N/A (disabled)',
+      };
+    }
+
     try {
       const info = await this.redis.info('stats');
       const memory = await this.redis.info('memory');
@@ -190,6 +218,11 @@ export class CacheService {
    * Limpar todo o cache (flush database)
    */
   async clearAll(): Promise<void> {
+    if (this.disabled || !this.redis) {
+      console.log('⚠️  Cache desabilitado - nada para limpar');
+      return;
+    }
+
     try {
       await this.redis.flushdb();
       console.log('🗑️  Cache CLEARED: Todos os dados do Redis foram removidos');
@@ -203,6 +236,8 @@ export class CacheService {
    * Fechar conexão Redis
    */
   async disconnect(): Promise<void> {
+    if (this.disabled || !this.redis) return;
+
     await this.redis.quit();
     console.log('👋 Cache Redis desconectado');
   }
