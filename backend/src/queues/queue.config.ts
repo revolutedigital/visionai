@@ -1,6 +1,10 @@
 import Queue from 'bull';
 import Redis from 'ioredis';
 
+// DEBUG: Log para verificar variáveis de ambiente
+console.log('🔍 REDIS_URL:', process.env.REDIS_URL ? 'DEFINIDO' : 'UNDEFINED');
+console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+
 // Configuração do Redis - suporta REDIS_URL do Railway ou config individual
 const redisConfig = process.env.REDIS_URL
   ? {
@@ -11,6 +15,7 @@ const redisConfig = process.env.REDIS_URL
       // Timeouts agressivos para evitar travar
       connectTimeout: 5000,
       commandTimeout: 5000,
+      lazyConnect: true, // Não conectar imediatamente
       // TLS pode ser necessário no Railway
       tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
     }
@@ -21,7 +26,10 @@ const redisConfig = process.env.REDIS_URL
       password: process.env.REDIS_PASSWORD || undefined,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      lazyConnect: true, // Não conectar imediatamente
     };
+
+console.log('📦 Configuração Redis:', process.env.REDIS_URL ? 'Usando REDIS_URL' : `Usando ${redisConfig.host}:${redisConfig.port}`);
 
 // Criar client Redis para o Bull
 const createRedisClient = (type: 'client' | 'subscriber' | 'bclient') => {
