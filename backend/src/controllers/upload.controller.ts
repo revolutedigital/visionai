@@ -91,7 +91,13 @@ export class UploadController {
       // Extrair dados usando o mapeamento identificado pela IA
       const extractedData = aiParserService.extractDataWithMapping(file.buffer, fileType, columnMapping);
 
+      console.log(`📊 Dados extraídos: ${extractedData.length} linhas`);
+      if (extractedData.length > 0) {
+        console.log('📊 Exemplo primeira linha:', JSON.stringify(extractedData[0]));
+      }
+
       if (extractedData.length === 0) {
+        console.log('❌ Nenhum dado extraído da planilha');
         return res.status(400).json({
           success: false,
           error: 'Nenhum dado válido encontrado na planilha',
@@ -130,12 +136,16 @@ export class UploadController {
       });
 
       if (clientes.length === 0) {
+        console.log('❌ Nenhum cliente válido após validação');
+        console.log('❌ Erros encontrados:', errors);
         return res.status(400).json({
           success: false,
           error: 'Erro ao processar planilha',
           details: errors,
         });
       }
+
+      console.log(`✅ ${clientes.length} clientes validados com sucesso`);
 
       const parseResult = {
         success: true,
