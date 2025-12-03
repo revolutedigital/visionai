@@ -121,12 +121,12 @@ export class UploadController {
           // Normalizar dados
           const cliente = {
             nome: row.nome.trim().replace(/\s+/g, ' '),
-            telefone: row.telefone ? row.telefone.replace(/\D/g, '') : null,
+            telefone: row.telefone ? String(row.telefone).replace(/\D/g, '') : null,
             endereco: row.endereco.trim().replace(/\s+/g, ' '),
             cidade: row.cidade ? row.cidade.trim() : null,
             estado: row.estado ? row.estado.trim().toUpperCase() : null,
-            cep: row.cep ? row.cep.replace(/\D/g, '') : null,
-            cnpj: row.cnpj ? row.cnpj.replace(/\D/g, '') : null,
+            cep: row.cep ? String(row.cep).replace(/\D/g, '') : null,
+            cnpj: row.cnpj ? String(row.cnpj).replace(/\D/g, '') : null,
           };
 
           clientes.push(cliente);
