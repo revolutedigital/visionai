@@ -93,7 +93,6 @@ if (REDIS_DISABLED) {
         enableReadyCheck: false,
         connectTimeout: 10000,
         commandTimeout: 10000,
-        retryDelayOnFailover: 100,
         tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
       }
     : {
@@ -118,7 +117,6 @@ if (REDIS_DISABLED) {
         enableReadyCheck: false,
         connectTimeout: 10000,
         commandTimeout: 10000,
-        retryDelayOnFailover: 100,
       });
       client.on('connect', () => console.log(`✅ Redis ${type} conectado`));
       client.on('error', (err) => console.error(`❌ Redis ${type} erro:`, err.message));
