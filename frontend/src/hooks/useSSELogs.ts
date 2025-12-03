@@ -89,7 +89,9 @@ export function useSSELogs(queueName: string, options: UseSSELogsOptions = {}) {
       retryTimeoutRef.current = null;
     }
 
-    const url = `${API_BASE_URL}/api/analysis/queue-logs-stream/${queueName}`;
+    // EventSource não suporta headers customizados, então passamos o token via query string
+    const token = localStorage.getItem('auth_token');
+    const url = `${API_BASE_URL}/api/analysis/queue-logs-stream/${queueName}${token ? `?token=${token}` : ''}`;
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 

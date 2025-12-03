@@ -13,24 +13,32 @@ export interface AuthRequest extends Request {
 
 /**
  * Middleware de autenticação JWT
+ * Aceita token via:
+ * 1. Header Authorization: Bearer <token>
+ * 2. Query string: ?token=<token> (para SSE/EventSource que não suporta headers)
  */
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader) {
+    // 1. Tentar pegar do header Authorization
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const [bearer, headerToken] = authHeader.split(' ');
+      if (bearer === 'Bearer' && headerToken) {
+        token = headerToken;
+      }
+    }
+
+    // 2. Se não tiver no header, tentar pegar da query string (para SSE)
+    if (!token && req.query.token) {
+      token = req.query.token as string;
+    }
+
+    if (!token) {
       return res.status(401).json({
         success: false,
         error: 'Token não fornecido',
-      });
-    }
-
-    const [bearer, token] = authHeader.split(' ');
-
-    if (bearer !== 'Bearer' || !token) {
-      return res.status(401).json({
-        success: false,
-        error: 'Formato de token inválido',
       });
     }
 
