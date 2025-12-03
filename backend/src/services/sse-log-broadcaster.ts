@@ -98,7 +98,7 @@ export class SSELogBroadcaster {
    */
   private setupQueueListeners() {
     // ========== RECEITA QUEUE ==========
-    receitaQueue.on('active', (job) => {
+    receitaQueue.on('active', (job: any) => {
       this.broadcast('receita', {
         type: 'processing',
         message: `🔄 Processando CNPJ: ${job.data.cnpj || job.id}`,
@@ -107,7 +107,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    receitaQueue.on('completed', (job, result) => {
+    receitaQueue.on('completed', (job: any, result: any) => {
       this.broadcast('receita', {
         type: 'success',
         message: `✅ CNPJ processado: ${result?.nomeFantasia || result?.razaoSocial || job.data.cnpj}`,
@@ -116,7 +116,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    receitaQueue.on('failed', (job, err) => {
+    receitaQueue.on('failed', (job: any, err: any) => {
       this.broadcast('receita', {
         type: 'error',
         message: `❌ Erro ao processar CNPJ ${job?.data?.cnpj}: ${err.message}`,
@@ -125,7 +125,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    receitaQueue.on('progress', (job, progress) => {
+    receitaQueue.on('progress', (job: any, progress: any) => {
       this.broadcast('receita', {
         type: 'progress',
         message: `📊 Progresso: ${progress}%`,
@@ -135,7 +135,7 @@ export class SSELogBroadcaster {
     });
 
     // ========== GEOCODING QUEUE ==========
-    geocodingQueue.on('active', (job) => {
+    geocodingQueue.on('active', (job: any) => {
       this.broadcast('geocoding', {
         type: 'processing',
         message: `🗺️ Geocodificando: ${job.data.endereco || job.id}`,
@@ -144,7 +144,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    geocodingQueue.on('completed', (job, result) => {
+    geocodingQueue.on('completed', (job: any, result: any) => {
       this.broadcast('geocoding', {
         type: 'success',
         message: `✅ Geocodificação concluída: ${result?.formatted_address || 'Sucesso'}`,
@@ -153,7 +153,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    geocodingQueue.on('failed', (job, err) => {
+    geocodingQueue.on('failed', (job: any, err: any) => {
       this.broadcast('geocoding', {
         type: 'error',
         message: `❌ Erro na geocodificação ${job?.id}: ${err.message}`,
@@ -163,7 +163,7 @@ export class SSELogBroadcaster {
     });
 
     // ========== PLACES QUEUE ==========
-    placesQueue.on('active', (job) => {
+    placesQueue.on('active', (job: any) => {
       this.broadcast('places', {
         type: 'processing',
         message: `📍 Buscando Google Places: ${job.data.nome || job.id}`,
@@ -172,7 +172,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    placesQueue.on('completed', (job, result) => {
+    placesQueue.on('completed', (job: any, result: any) => {
       this.broadcast('places', {
         type: 'success',
         message: `✅ Google Places encontrado: ${result?.name || 'Sucesso'} (${result?.fotos?.length || 0} fotos)`,
@@ -181,7 +181,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    placesQueue.on('failed', (job, err) => {
+    placesQueue.on('failed', (job: any, err: any) => {
       this.broadcast('places', {
         type: 'error',
         message: `❌ Erro no Google Places ${job?.id}: ${err.message}`,
@@ -191,7 +191,7 @@ export class SSELogBroadcaster {
     });
 
     // ========== ANALYSIS QUEUE ==========
-    analysisQueue.on('active', (job) => {
+    analysisQueue.on('active', (job: any) => {
       this.broadcast('analysis', {
         type: 'processing',
         message: `🤖 Analisando com IA: Cliente ${job.data.clienteId}`,
@@ -200,7 +200,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    analysisQueue.on('completed', (job, result) => {
+    analysisQueue.on('completed', (job: any, result: any) => {
       // 🎯 VISION AI: Mostrar confiança geral (não tipologia - será classificada em worker separado)
       const confiancaGeral = result?.confiancaGeral !== undefined ? result.confiancaGeral : 0;
       const categoria = result?.confianciaCategoria || 'N/A';
@@ -218,7 +218,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    analysisQueue.on('failed', (job, err) => {
+    analysisQueue.on('failed', (job: any, err: any) => {
       this.broadcast('analysis', {
         type: 'error',
         message: `❌ Erro na análise IA ${job?.id}: ${err.message}`,
@@ -227,7 +227,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    analysisQueue.on('progress', (job, progress) => {
+    analysisQueue.on('progress', (job: any, progress: any) => {
       this.broadcast('analysis', {
         type: 'progress',
         message: `🔄 Analisando fotos: ${progress}%`,
@@ -237,7 +237,7 @@ export class SSELogBroadcaster {
     });
 
     // ========== TIPOLOGIA QUEUE ==========
-    tipologiaQueue.on('active', (job) => {
+    tipologiaQueue.on('active', (job: any) => {
       this.broadcast('tipologia', {
         type: 'processing',
         message: `🏷️ Classificando tipologia: ${job.data.nome || job.id}`,
@@ -246,7 +246,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    tipologiaQueue.on('completed', (job, result) => {
+    tipologiaQueue.on('completed', (job: any, result: any) => {
       const tipologia = result?.tipologia || 'N/A';
       const confianca = result?.confianca || 0;
 
@@ -261,7 +261,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    tipologiaQueue.on('failed', (job, err) => {
+    tipologiaQueue.on('failed', (job: any, err: any) => {
       this.broadcast('tipologia', {
         type: 'error',
         message: `❌ Erro ao classificar tipologia ${job?.id}: ${err.message}`,
@@ -270,7 +270,7 @@ export class SSELogBroadcaster {
       });
     });
 
-    tipologiaQueue.on('progress', (job, progress) => {
+    tipologiaQueue.on('progress', (job: any, progress: any) => {
       this.broadcast('tipologia', {
         type: 'progress',
         message: `📊 Classificando: ${progress}%`,
