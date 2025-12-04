@@ -146,7 +146,7 @@ export class PlacesController {
       // Estatísticas do banco
       const [
         totalClientes,
-        processados,
+        processadosSucesso,
         pendentes,
         falhas,
         comFotos,
@@ -172,6 +172,9 @@ export class PlacesController {
       // Total de fotos
       const totalFotos = await prisma.foto.count();
 
+      // Total processados = sucesso + falhas (ambos foram tentados)
+      const totalProcessados = processadosSucesso + falhas;
+
       return res.json({
         success: true,
         redisAvailable,
@@ -183,12 +186,13 @@ export class PlacesController {
         },
         clientes: {
           total: totalClientes,
-          processados,
+          processados: totalProcessados,
+          sucesso: processadosSucesso,
           pendentes,
           falhas,
           comFotos,
           percentualCompleto:
-            totalClientes > 0 ? Math.round((processados / totalClientes) * 100) : 0,
+            totalClientes > 0 ? Math.round((totalProcessados / totalClientes) * 100) : 0,
         },
         potencial: {
           alto: altosPotencial,
