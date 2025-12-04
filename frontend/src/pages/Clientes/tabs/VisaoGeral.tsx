@@ -41,9 +41,13 @@ interface ClienteData {
   camposCriticos?: string;
   fontesValidadas?: string;
   camposPreenchidos?: number;
+  dataQualityBreakdown?: string;
   placesStatus?: string;
   geocodingStatus?: string;
   receitaStatus?: string;
+  ambienteEstabelecimento?: string;
+  publicoAlvo?: string;
+  totalFotosDisponiveis?: number;
 }
 
 interface VisaoGeralProps {
@@ -254,26 +258,86 @@ export function VisaoGeral({ cliente }: VisaoGeralProps) {
           </h3>
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Tipologia</p>
-              <p className="text-sm font-semibold text-gray-900">{cliente.tipologia}</p>
-              {cliente.tipologiaNome && (
-                <p className="text-xs text-gray-600 mt-1">{cliente.tipologiaNome}</p>
-              )}
-              {cliente.tipologiaConfianca && (
-                <div className="mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500">Tipologia</p>
+                {cliente.tipologiaConfianca && (
                   <ConfidenceIndicator
                     confidence={cliente.tipologiaConfianca}
                     showLabel={true}
                     showWarning={true}
                     size="sm"
                   />
+                )}
+              </div>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                <p className="text-lg font-bold text-indigo-800">{cliente.tipologia}</p>
+                {cliente.tipologiaNome && (
+                  <p className="text-sm text-indigo-600 mt-1">{cliente.tipologiaNome}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Explicação de como chegamos na tipologia */}
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-3 font-medium flex items-center">
+                <Info className="w-3 h-3 mr-1" />
+                Como chegamos nesta classificação:
+              </p>
+
+              {/* Justificativa da IA */}
+              {cliente.tipologiaJustificativa && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
+                  <p className="text-sm text-blue-800">{cliente.tipologiaJustificativa}</p>
                 </div>
               )}
+
+              {/* Dados utilizados para classificar */}
+              <div className="space-y-2 text-xs">
+                <p className="font-medium text-gray-700">Dados considerados:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {cliente.tipoEstabelecimento && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Tipo: {cliente.tipoEstabelecimento}
+                    </div>
+                  )}
+                  {cliente.rating && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Rating: {cliente.rating.toFixed(1)}
+                    </div>
+                  )}
+                  {cliente.ambienteEstabelecimento && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Ambiente: {cliente.ambienteEstabelecimento}
+                    </div>
+                  )}
+                  {cliente.publicoAlvo && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Publico
+                    </div>
+                  )}
+                  {(cliente.totalFotosDisponiveis ?? 0) > 0 && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {cliente.totalFotosDisponiveis} fotos
+                    </div>
+                  )}
+                  {cliente.placesStatus === 'SUCESSO' && (
+                    <div className="flex items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Google Places
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {cliente.estrategiaComercial && (
               <div className="pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-500 mb-2">Estratégia Comercial</p>
+                <p className="text-xs text-gray-500 mb-2">Estratégia Comercial Sugerida</p>
                 <p className="text-sm text-gray-700">{cliente.estrategiaComercial}</p>
               </div>
             )}
@@ -348,7 +412,7 @@ export function VisaoGeral({ cliente }: VisaoGeralProps) {
           Qualidade dos Dados
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Score e Barra de Progresso */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -389,94 +453,168 @@ export function VisaoGeral({ cliente }: VisaoGeralProps) {
                     : 'text-red-600'
                 }`}
               >
-                {cliente.confiabilidadeDados || 'NÃO CALCULADA'}
+                {cliente.confiabilidadeDados || 'NAO CALCULADA'}
               </span>
             </div>
+
+            {/* Fontes Validadas */}
+            {cliente.fontesValidadas && (() => {
+              try {
+                const fontes = JSON.parse(cliente.fontesValidadas);
+                if (fontes.length > 0) {
+                  return (
+                    <div className="mt-4 bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-green-800 mb-1 text-xs">Fontes validadas:</p>
+                      <ul className="text-green-700 space-y-0.5 text-xs">
+                        {fontes.map((fonte: string, idx: number) => (
+                          <li key={idx} className="flex items-center">
+                            <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                            {fonte}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+                return null;
+              } catch {
+                return null;
+              }
+            })()}
           </div>
 
-          {/* Explicação do Score */}
-          <div>
+          {/* Breakdown detalhado por categoria */}
+          <div className="md:col-span-2">
             <p className="text-xs text-gray-500 mb-3 font-medium flex items-center">
               <Info className="w-3 h-3 mr-1" />
               Como chegamos a este score:
             </p>
 
-            <div className="space-y-2 text-xs">
-              {/* Fontes Validadas */}
-              {cliente.fontesValidadas && (() => {
-                try {
-                  const fontes = JSON.parse(cliente.fontesValidadas);
-                  if (fontes.length > 0) {
-                    return (
-                      <div className="bg-green-50 border border-green-200 rounded p-2">
-                        <p className="font-medium text-green-800 mb-1">Fontes validadas:</p>
-                        <ul className="text-green-700 space-y-0.5">
-                          {fontes.map((fonte: string, idx: number) => (
-                            <li key={idx} className="flex items-center">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              {fonte}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  }
-                  return null;
-                } catch {
-                  return null;
-                }
-              })()}
+            {/* Se tem breakdown detalhado, mostrar por categoria */}
+            {cliente.dataQualityBreakdown && (() => {
+              try {
+                const breakdown = JSON.parse(cliente.dataQualityBreakdown);
+                const categorias = breakdown.porCategoria;
 
-              {/* Campos Críticos Faltando */}
-              {cliente.camposCriticos && (() => {
-                try {
-                  const campos = JSON.parse(cliente.camposCriticos);
-                  if (campos.length > 0) {
-                    return (
-                      <div className="bg-red-50 border border-red-200 rounded p-2">
-                        <p className="font-medium text-red-800 mb-1">Campos críticos faltando:</p>
-                        <ul className="text-red-700 space-y-0.5">
-                          {campos.map((campo: string, idx: number) => (
-                            <li key={idx} className="flex items-center">
-                              <XCircle className="w-3 h-3 mr-1" />
-                              {campo === 'telefone' ? 'Telefone' :
-                               campo === 'fotos' ? 'Fotos do estabelecimento' :
-                               campo === 'rating' ? 'Rating do Google' :
-                               campo === 'totalAvaliacoes' ? 'Número de avaliações' :
-                               campo === 'tipoEstabelecimento' ? 'Tipo de estabelecimento' :
-                               campo === 'latitude' ? 'Coordenadas (Latitude)' :
-                               campo === 'longitude' ? 'Coordenadas (Longitude)' :
-                               campo === 'placeId' ? 'Place ID do Google' :
-                               campo}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  }
-                  return null;
-                } catch {
-                  return null;
-                }
-              })()}
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Object.entries(categorias).map(([key, cat]: [string, any]) => {
+                      const camposPreenchidos = cat.campos.filter((c: any) => c.preenchido);
+                      const camposFaltando = cat.campos.filter((c: any) => !c.preenchido);
+                      const percentual = cat.pesoTotal > 0 ? Math.round((cat.pesoObtido / cat.pesoTotal) * 100) : 0;
 
-              {/* Se não tem fontes nem campos críticos, mostrar explicação genérica */}
-              {(!cliente.fontesValidadas || cliente.fontesValidadas === '[]') &&
-               (!cliente.camposCriticos || cliente.camposCriticos === '[]') && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-2">
-                  <p className="text-gray-600">
-                    O score de qualidade é calculado com base em:
-                  </p>
-                  <ul className="text-gray-500 mt-1 space-y-0.5 list-disc list-inside">
-                    <li>Dados básicos (nome, endereço, telefone)</li>
-                    <li>Localização (geocodificação)</li>
-                    <li>Dados do Google Places</li>
-                    <li>Análise visual das fotos</li>
-                    <li>Reviews e avaliações</li>
-                  </ul>
-                </div>
-              )}
-            </div>
+                      return (
+                        <div key={key} className="border rounded-lg p-3 bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm text-gray-800">{cat.nome}</span>
+                            <span className={`text-xs font-bold ${
+                              percentual >= 80 ? 'text-green-600' :
+                              percentual >= 50 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {cat.pesoObtido}/{cat.pesoTotal} pts
+                            </span>
+                          </div>
+
+                          {/* Barra de progresso da categoria */}
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                percentual >= 80 ? 'bg-green-500' :
+                                percentual >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${percentual}%` }}
+                            ></div>
+                          </div>
+
+                          {/* Lista de campos */}
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {camposPreenchidos.slice(0, 4).map((campo: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between text-xs">
+                                <span className="text-green-700 flex items-center truncate">
+                                  <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                                  <span className="truncate">{campo.label}</span>
+                                </span>
+                                <span className="text-green-600 ml-1 flex-shrink-0">+{campo.pontos}</span>
+                              </div>
+                            ))}
+                            {camposFaltando.slice(0, 2).map((campo: any, idx: number) => (
+                              <div key={`f-${idx}`} className="flex items-center justify-between text-xs">
+                                <span className="text-red-600 flex items-center truncate">
+                                  <XCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                                  <span className="truncate">{campo.label}</span>
+                                </span>
+                                <span className="text-gray-400 ml-1 flex-shrink-0">0/{campo.peso}</span>
+                              </div>
+                            ))}
+                            {(camposPreenchidos.length > 4 || camposFaltando.length > 2) && (
+                              <p className="text-xs text-gray-400 italic">
+                                +{Math.max(0, camposPreenchidos.length - 4) + Math.max(0, camposFaltando.length - 2)} mais...
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              } catch {
+                return null;
+              }
+            })()}
+
+            {/* Se não tem breakdown, mostrar explicação genérica ou campos críticos */}
+            {!cliente.dataQualityBreakdown && (
+              <div className="space-y-2 text-xs">
+                {/* Campos Críticos Faltando */}
+                {cliente.camposCriticos && (() => {
+                  try {
+                    const campos = JSON.parse(cliente.camposCriticos);
+                    if (campos.length > 0) {
+                      return (
+                        <div className="bg-red-50 border border-red-200 rounded p-2">
+                          <p className="font-medium text-red-800 mb-1">Campos críticos faltando:</p>
+                          <ul className="text-red-700 space-y-0.5">
+                            {campos.map((campo: string, idx: number) => (
+                              <li key={idx} className="flex items-center">
+                                <XCircle className="w-3 h-3 mr-1" />
+                                {campo === 'telefone' ? 'Telefone' :
+                                 campo === 'fotos' ? 'Fotos do estabelecimento' :
+                                 campo === 'rating' ? 'Rating do Google' :
+                                 campo === 'totalAvaliacoes' ? 'Numero de avaliacoes' :
+                                 campo === 'tipoEstabelecimento' ? 'Tipo de estabelecimento' :
+                                 campo === 'latitude' ? 'Coordenadas (Latitude)' :
+                                 campo === 'longitude' ? 'Coordenadas (Longitude)' :
+                                 campo === 'placeId' ? 'Place ID do Google' :
+                                 campo}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    }
+                    return null;
+                  } catch {
+                    return null;
+                  }
+                })()}
+
+                {/* Se não tem campos críticos também */}
+                {(!cliente.camposCriticos || cliente.camposCriticos === '[]') && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                    <p className="text-gray-600">
+                      O score de qualidade é calculado com base em:
+                    </p>
+                    <ul className="text-gray-500 mt-1 space-y-0.5 list-disc list-inside">
+                      <li>Dados básicos (nome, endereço, telefone)</li>
+                      <li>Localização (geocodificação)</li>
+                      <li>Dados do Google Places</li>
+                      <li>Análise visual das fotos</li>
+                      <li>Reviews e avaliações</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -484,7 +622,7 @@ export function VisaoGeral({ cliente }: VisaoGeralProps) {
         {cliente.camposPreenchidos !== undefined && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Campos preenchidos:</span>
+              <span className="text-gray-600">Total de campos preenchidos:</span>
               <span className="font-medium text-gray-900">
                 {cliente.camposPreenchidos} / 28 campos
               </span>

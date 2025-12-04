@@ -170,6 +170,7 @@ model Cliente {
   ultimaValidacao        DateTime?
   confiabilidadeDados    String? @default("BAIXA") // BAIXA, MEDIA, ALTA, EXCELENTE
   fontesValidadas        String? // JSON: quais fontes foram consultadas
+  dataQualityBreakdown   String? @db.Text // JSON: breakdown detalhado de cada campo com pontos
   tentativasEnriquecimento Int? @default(0)
 
   // Enrichment Sprint 3+

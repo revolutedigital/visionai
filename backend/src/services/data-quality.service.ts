@@ -15,6 +15,7 @@ interface DataQualityReport {
   camposCriticos: string[];
   fontesValidadas: string[];
   recomendacoes: string[];
+  breakdown: DataQualityBreakdown;
 }
 
 interface CampoValidacao {
@@ -22,52 +23,86 @@ interface CampoValidacao {
   valor: any;
   peso: number; // 1-5 (5 = crítico)
   categoria: 'BASICO' | 'COMERCIAL' | 'LOCALIZACAO' | 'DIGITAL' | 'VISUAL' | 'REVIEWS';
+  label: string; // Nome amigável para exibição
+}
+
+interface CampoBreakdown {
+  campo: string;
+  label: string;
+  peso: number;
+  pontos: number;
+  preenchido: boolean;
+  categoria: string;
+}
+
+interface DataQualityBreakdown {
+  pesoTotal: number;
+  pesoObtido: number;
+  porCategoria: {
+    [key: string]: {
+      nome: string;
+      campos: CampoBreakdown[];
+      pesoTotal: number;
+      pesoObtido: number;
+    };
+  };
 }
 
 export class DataQualityService {
+  /**
+   * Nomes amigáveis das categorias
+   */
+  private readonly CATEGORIA_NOMES: Record<string, string> = {
+    BASICO: 'Dados Básicos',
+    LOCALIZACAO: 'Localização',
+    COMERCIAL: 'Dados Comerciais',
+    VISUAL: 'Análise Visual',
+    REVIEWS: 'Avaliações',
+  };
+
   /**
    * Campos críticos e seus pesos para o score de qualidade
    */
   private readonly CAMPOS_VALIDACAO: CampoValidacao[] = [
     // BÁSICO (Peso Alto - essenciais para qualquer operação)
-    { nome: 'nome', valor: null, peso: 5, categoria: 'BASICO' },
-    { nome: 'endereco', valor: null, peso: 5, categoria: 'BASICO' },
-    { nome: 'telefone', valor: null, peso: 4, categoria: 'BASICO' },
-    { nome: 'cidade', valor: null, peso: 3, categoria: 'BASICO' },
-    { nome: 'estado', valor: null, peso: 3, categoria: 'BASICO' },
-    { nome: 'cep', valor: null, peso: 3, categoria: 'BASICO' },
+    { nome: 'nome', valor: null, peso: 5, categoria: 'BASICO', label: 'Nome do Estabelecimento' },
+    { nome: 'endereco', valor: null, peso: 5, categoria: 'BASICO', label: 'Endereço' },
+    { nome: 'telefone', valor: null, peso: 4, categoria: 'BASICO', label: 'Telefone' },
+    { nome: 'cidade', valor: null, peso: 3, categoria: 'BASICO', label: 'Cidade' },
+    { nome: 'estado', valor: null, peso: 3, categoria: 'BASICO', label: 'Estado' },
+    { nome: 'cep', valor: null, peso: 3, categoria: 'BASICO', label: 'CEP' },
 
     // LOCALIZAÇÃO (Peso Alto - crítico para análise geográfica)
-    { nome: 'latitude', valor: null, peso: 5, categoria: 'LOCALIZACAO' },
-    { nome: 'longitude', valor: null, peso: 5, categoria: 'LOCALIZACAO' },
-    { nome: 'enderecoFormatado', valor: null, peso: 3, categoria: 'LOCALIZACAO' },
-    { nome: 'placeId', valor: null, peso: 4, categoria: 'LOCALIZACAO' },
+    { nome: 'latitude', valor: null, peso: 5, categoria: 'LOCALIZACAO', label: 'Latitude' },
+    { nome: 'longitude', valor: null, peso: 5, categoria: 'LOCALIZACAO', label: 'Longitude' },
+    { nome: 'enderecoFormatado', valor: null, peso: 3, categoria: 'LOCALIZACAO', label: 'Endereço Formatado (Google)' },
+    { nome: 'placeId', valor: null, peso: 4, categoria: 'LOCALIZACAO', label: 'Google Place ID' },
 
     // COMERCIAL (Peso Médio-Alto - importante para scoring)
-    { nome: 'tipoEstabelecimento', valor: null, peso: 4, categoria: 'COMERCIAL' },
-    { nome: 'rating', valor: null, peso: 4, categoria: 'COMERCIAL' },
-    { nome: 'totalAvaliacoes', valor: null, peso: 4, categoria: 'COMERCIAL' },
-    { nome: 'horarioFuncionamento', valor: null, peso: 3, categoria: 'COMERCIAL' },
-    { nome: 'telefonePlace', valor: null, peso: 3, categoria: 'COMERCIAL' },
-    { nome: 'websitePlace', valor: null, peso: 2, categoria: 'COMERCIAL' },
+    { nome: 'tipoEstabelecimento', valor: null, peso: 4, categoria: 'COMERCIAL', label: 'Tipo de Estabelecimento' },
+    { nome: 'rating', valor: null, peso: 4, categoria: 'COMERCIAL', label: 'Avaliação Google' },
+    { nome: 'totalAvaliacoes', valor: null, peso: 4, categoria: 'COMERCIAL', label: 'Total de Avaliações' },
+    { nome: 'horarioFuncionamento', valor: null, peso: 3, categoria: 'COMERCIAL', label: 'Horário de Funcionamento' },
+    { nome: 'telefonePlace', valor: null, peso: 3, categoria: 'COMERCIAL', label: 'Telefone (Google)' },
+    { nome: 'websitePlace', valor: null, peso: 2, categoria: 'COMERCIAL', label: 'Website' },
 
     // DIGITAL/VISUAL (Peso Médio - enriquece análise)
-    { nome: 'qualidadeSinalizacao', valor: null, peso: 2, categoria: 'VISUAL' },
-    { nome: 'presencaBranding', valor: null, peso: 2, categoria: 'VISUAL' },
-    { nome: 'nivelProfissionalizacao', valor: null, peso: 2, categoria: 'VISUAL' },
-    { nome: 'publicoAlvo', valor: null, peso: 3, categoria: 'VISUAL' },
-    { nome: 'ambienteEstabelecimento', valor: null, peso: 2, categoria: 'VISUAL' },
-    { nome: 'indicadoresVisuais', valor: null, peso: 2, categoria: 'VISUAL' },
+    { nome: 'qualidadeSinalizacao', valor: null, peso: 2, categoria: 'VISUAL', label: 'Qualidade da Sinalização' },
+    { nome: 'presencaBranding', valor: null, peso: 2, categoria: 'VISUAL', label: 'Presença de Branding' },
+    { nome: 'nivelProfissionalizacao', valor: null, peso: 2, categoria: 'VISUAL', label: 'Nível de Profissionalização' },
+    { nome: 'publicoAlvo', valor: null, peso: 3, categoria: 'VISUAL', label: 'Público Alvo' },
+    { nome: 'ambienteEstabelecimento', valor: null, peso: 2, categoria: 'VISUAL', label: 'Ambiente' },
+    { nome: 'indicadoresVisuais', valor: null, peso: 2, categoria: 'VISUAL', label: 'Indicadores Visuais' },
 
     // REVIEWS (Peso Médio - insights valiosos)
-    { nome: 'reviews', valor: null, peso: 3, categoria: 'REVIEWS' },
-    { nome: 'sentimentoGeral', valor: null, peso: 2, categoria: 'REVIEWS' },
-    { nome: 'problemasRecorrentes', valor: null, peso: 3, categoria: 'REVIEWS' },
-    { nome: 'pontosFortes', valor: null, peso: 3, categoria: 'REVIEWS' },
+    { nome: 'reviews', valor: null, peso: 3, categoria: 'REVIEWS', label: 'Reviews' },
+    { nome: 'sentimentoGeral', valor: null, peso: 2, categoria: 'REVIEWS', label: 'Sentimento Geral' },
+    { nome: 'problemasRecorrentes', valor: null, peso: 3, categoria: 'REVIEWS', label: 'Problemas Recorrentes' },
+    { nome: 'pontosFortes', valor: null, peso: 3, categoria: 'REVIEWS', label: 'Pontos Fortes' },
 
     // SCORING (Peso Baixo - derivados de outros campos)
-    { nome: 'scoringBreakdown', valor: null, peso: 1, categoria: 'COMERCIAL' },
-    { nome: 'potencialScore', valor: null, peso: 1, categoria: 'COMERCIAL' },
+    { nome: 'scoringBreakdown', valor: null, peso: 1, categoria: 'COMERCIAL', label: 'Breakdown de Potencial' },
+    { nome: 'potencialScore', valor: null, peso: 1, categoria: 'COMERCIAL', label: 'Score de Potencial' },
   ];
 
   /**
@@ -92,12 +127,47 @@ export class DataQualityService {
     const fontesValidadas: string[] = [];
     const recomendacoes: string[] = [];
 
+    // Inicializar breakdown por categoria
+    const breakdown: DataQualityBreakdown = {
+      pesoTotal: 0,
+      pesoObtido: 0,
+      porCategoria: {},
+    };
+
+    // Inicializar categorias
+    for (const cat of Object.keys(this.CATEGORIA_NOMES)) {
+      breakdown.porCategoria[cat] = {
+        nome: this.CATEGORIA_NOMES[cat],
+        campos: [],
+        pesoTotal: 0,
+        pesoObtido: 0,
+      };
+    }
+
     // Analisar cada campo
     for (const campo of this.CAMPOS_VALIDACAO) {
       const valor = (cliente as any)[campo.nome];
       const preenchido = this.isFieldFilled(valor);
 
       pesoTotal += campo.peso;
+
+      const campoBreakdown: CampoBreakdown = {
+        campo: campo.nome,
+        label: campo.label,
+        peso: campo.peso,
+        pontos: preenchido ? campo.peso : 0,
+        preenchido,
+        categoria: campo.categoria,
+      };
+
+      // Adicionar ao breakdown da categoria
+      if (breakdown.porCategoria[campo.categoria]) {
+        breakdown.porCategoria[campo.categoria].campos.push(campoBreakdown);
+        breakdown.porCategoria[campo.categoria].pesoTotal += campo.peso;
+        if (preenchido) {
+          breakdown.porCategoria[campo.categoria].pesoObtido += campo.peso;
+        }
+      }
 
       if (preenchido) {
         camposPreenchidos++;
@@ -108,14 +178,30 @@ export class DataQualityService {
       }
     }
 
-    // Adicionar fotos ao cálculo
-    if (cliente.fotos.length > 0) {
+    // Adicionar fotos ao cálculo (categoria VISUAL)
+    const fotosPreenchido = cliente.fotos.length > 0;
+    const fotosBreakdown: CampoBreakdown = {
+      campo: 'fotos',
+      label: 'Fotos do Estabelecimento',
+      peso: 5,
+      pontos: fotosPreenchido ? 5 : 0,
+      preenchido: fotosPreenchido,
+      categoria: 'VISUAL',
+    };
+    breakdown.porCategoria['VISUAL'].campos.unshift(fotosBreakdown);
+    breakdown.porCategoria['VISUAL'].pesoTotal += 5;
+    if (fotosPreenchido) {
+      breakdown.porCategoria['VISUAL'].pesoObtido += 5;
       pesoPreenchido += 5;
       camposPreenchidos++;
     } else {
       camposCriticos.push('fotos');
     }
     pesoTotal += 5;
+
+    // Atualizar totais do breakdown
+    breakdown.pesoTotal = pesoTotal;
+    breakdown.pesoObtido = pesoPreenchido;
 
     // Calcular score baseado em peso ponderado
     const score = Math.round((pesoPreenchido / pesoTotal) * 100);
@@ -168,6 +254,7 @@ export class DataQualityService {
       camposCriticos,
       fontesValidadas,
       recomendacoes,
+      breakdown,
     };
   }
 
@@ -185,6 +272,7 @@ export class DataQualityService {
         camposCriticos: JSON.stringify(report.camposCriticos),
         confiabilidadeDados: report.confiabilidade,
         fontesValidadas: JSON.stringify(report.fontesValidadas),
+        dataQualityBreakdown: JSON.stringify(report.breakdown),
         ultimaValidacao: new Date(),
       },
     });
@@ -230,6 +318,7 @@ export class DataQualityService {
             camposCriticos: JSON.stringify(report.camposCriticos),
             confiabilidadeDados: report.confiabilidade,
             fontesValidadas: JSON.stringify(report.fontesValidadas),
+            dataQualityBreakdown: JSON.stringify(report.breakdown),
             ultimaValidacao: new Date(),
           },
         });
