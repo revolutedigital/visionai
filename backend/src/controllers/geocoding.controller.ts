@@ -136,10 +136,11 @@ export class GeocodingController {
       }
 
       // Estatísticas do banco
-      const [totalClientes, geocodificados, pendentes, falhas] = await Promise.all([
+      const [totalClientes, geocodificados, pendentes, processando, falhas] = await Promise.all([
         prisma.cliente.count(),
         prisma.cliente.count({ where: { geocodingStatus: 'SUCESSO' } }),
         prisma.cliente.count({ where: { geocodingStatus: 'PENDENTE' } }),
+        prisma.cliente.count({ where: { geocodingStatus: 'PROCESSANDO' } }),
         prisma.cliente.count({ where: { geocodingStatus: 'FALHA' } }),
       ]);
 
@@ -156,6 +157,7 @@ export class GeocodingController {
           total: totalClientes,
           geocodificados,
           pendentes,
+          processando,
           falhas,
           percentualCompleto: totalClientes > 0
             ? Math.round((geocodificados / totalClientes) * 100)
@@ -275,6 +277,48 @@ export class GeocodingController {
       return res.status(500).json({
         success: false,
         error: 'Erro ao reprocessar clientes com falha',
+      });
+    }
+  }
+
+  /**
+   * Resetar clientes travados em PROCESSANDO
+   * POST /api/geocoding/reset-stuck
+   */
+  async resetStuckClients(req: Request, res: Response) {
+    try {
+      const { timeoutMinutes = 30 } = req.query;
+      const timeout = parseInt(timeoutMinutes as string) || 30;
+      const cutoffDate = new Date(Date.now() - timeout * 60 * 1000);
+
+      // Resetar clientes travados em PROCESSANDO há mais de X minutos
+      const result = await prisma.cliente.updateMany({
+        where: {
+          geocodingStatus: 'PROCESSANDO',
+          geocodingIniciadoEm: { lt: cutoffDate },
+        },
+        data: {
+          geocodingStatus: 'PENDENTE',
+          geocodingIniciadoEm: null,
+        },
+      });
+
+      console.log(`🔄 Reset de geocoding travados: ${result.count} clientes resetados`);
+
+      return res.json({
+        success: true,
+        message: `${result.count} clientes resetados`,
+        details: {
+          geocodingReset: result.count,
+          timeoutMinutes: timeout,
+        },
+      });
+    } catch (error: any) {
+      console.error('Erro ao resetar clientes travados:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro ao resetar clientes travados',
+        details: error.message,
       });
     }
   }

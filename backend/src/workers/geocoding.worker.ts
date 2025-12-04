@@ -33,10 +33,13 @@ geocodingQueue.process(async (job: Job<GeocodingJobData>) => {
       throw new Error('Cliente não encontrado');
     }
 
-    // Atualizar status para PROCESSANDO
+    // Atualizar status para PROCESSANDO com timestamp
     await prisma.cliente.update({
       where: { id: clienteId },
-      data: { geocodingStatus: 'PROCESSANDO' },
+      data: {
+        geocodingStatus: 'PROCESSANDO',
+        geocodingIniciadoEm: new Date(),
+      },
     });
 
     // Usar dados normalizados (se disponíveis), senão usar originais
