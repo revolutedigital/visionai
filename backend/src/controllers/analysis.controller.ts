@@ -223,12 +223,12 @@ export class AnalysisController {
         prisma.cliente.count(), // Total de TODOS os clientes
         prisma.cliente.count({
           where: {
-            receitaStatus: { notIn: ['PENDENTE'] }, // Tudo exceto PENDENTE = já foi processado ou está processando
+            receitaStatus: { in: ['SUCESSO', 'FALHA', 'NAO_APLICAVEL'] }, // Somente CONCLUÍDOS (não PENDENTE nem PROCESSANDO)
           },
         }),
         prisma.cliente.count({
           where: {
-            normalizacaoStatus: { notIn: ['PENDENTE'] }, // Tudo exceto PENDENTE = já foi processado ou está processando
+            normalizacaoStatus: { in: ['SUCESSO', 'FALHA'] }, // Somente CONCLUÍDOS (não PENDENTE nem PROCESSANDO)
           },
         }),
         prisma.cliente.count({ where: { divergenciaEndereco: true } }),
