@@ -2310,15 +2310,13 @@ export class AnalysisController {
             receitaIniciadoEm: null,
           },
         }),
-        // Reset Normalização
+        // Reset Normalização (sem timestamp de início, usa apenas status)
         prisma.cliente.updateMany({
           where: {
             normalizacaoStatus: 'PROCESSANDO',
-            normalizacaoIniciadoEm: { lt: cutoffDate },
           },
           data: {
             normalizacaoStatus: 'PENDENTE',
-            normalizacaoIniciadoEm: null,
           },
         }),
       ]);
