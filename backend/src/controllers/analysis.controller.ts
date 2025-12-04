@@ -2475,4 +2475,134 @@ export class AnalysisController {
       });
     }
   }
+
+  /**
+   * Desbloquear pipelines travados
+   * POST /api/analysis/unlock-pipelines
+   *
+   * Executa todas as correções necessárias para desbloquear pipelines travados:
+   * 1. Marca fotos de clientes com erro/PROCESSANDO como analisadas
+   * 2. Atualiza clientes com todas as fotos analisadas para status CONCLUIDO
+   */
+  async unlockPipelines(req: Request, res: Response) {
+    try {
+      console.log(`\n🔓 ===== DESBLOQUEANDO PIPELINES TRAVADOS =====`);
+
+      // PASSO 1: Marcar fotos de clientes com erro/PROCESSANDO como analisadas
+      const clientesTravados = await prisma.cliente.findMany({
+        where: {
+          OR: [
+            { status: 'ERRO' },
+            { status: 'PROCESSANDO' },
+          ],
+          fotos: {
+            some: {
+              analisadaPorIA: false,
+            },
+          },
+        },
+        select: {
+          id: true,
+          nome: true,
+          status: true,
+          fotos: {
+            where: { analisadaPorIA: false },
+            select: { id: true },
+          },
+        },
+      });
+
+      let fotosAtualizadas = 0;
+      if (clientesTravados.length > 0) {
+        const fotoIds = clientesTravados.flatMap(c => c.fotos.map(f => f.id));
+
+        const resultFotos = await prisma.foto.updateMany({
+          where: { id: { in: fotoIds } },
+          data: {
+            analisadaPorIA: true,
+            analiseResultado: JSON.stringify({
+              success: false,
+              error: 'Cliente travado - marcado automaticamente',
+              marcadoAutomaticamente: true,
+            }),
+            analiseEm: new Date(),
+          },
+        });
+        fotosAtualizadas = resultFotos.count;
+        console.log(`📸 ${fotosAtualizadas} fotos de ${clientesTravados.length} clientes travados marcadas como analisadas`);
+      }
+
+      // PASSO 2: Atualizar status de clientes com todas as fotos analisadas para CONCLUIDO
+      // Buscar clientes que têm fotos e todas estão analisadas mas status não é CONCLUIDO
+      const clientesParaConcluir = await prisma.cliente.findMany({
+        where: {
+          status: { not: 'CONCLUIDO' },
+          fotos: {
+            some: {}, // Tem pelo menos uma foto
+          },
+        },
+        select: {
+          id: true,
+          nome: true,
+          status: true,
+          fotos: {
+            select: { analisadaPorIA: true },
+          },
+        },
+      });
+
+      // Filtrar apenas os que têm todas as fotos analisadas
+      const clientesProntos = clientesParaConcluir.filter(c =>
+        c.fotos.length > 0 && c.fotos.every(f => f.analisadaPorIA)
+      );
+
+      let clientesConcluidos = 0;
+      if (clientesProntos.length > 0) {
+        const resultClientes = await prisma.cliente.updateMany({
+          where: { id: { in: clientesProntos.map(c => c.id) } },
+          data: { status: 'CONCLUIDO' },
+        });
+        clientesConcluidos = resultClientes.count;
+        console.log(`✅ ${clientesConcluidos} clientes atualizados para status CONCLUIDO`);
+      }
+
+      // PASSO 3: Estatísticas finais
+      const [totalClientes, concluidos, comTipologia, semTipologiaConcluidos] = await Promise.all([
+        prisma.cliente.count(),
+        prisma.cliente.count({ where: { status: 'CONCLUIDO' } }),
+        prisma.cliente.count({ where: { tipologia: { not: null } } }),
+        prisma.cliente.count({ where: { status: 'CONCLUIDO', tipologia: null } }),
+      ]);
+
+      console.log(`\n📊 Estatísticas após desbloqueio:`);
+      console.log(`   - Total clientes: ${totalClientes}`);
+      console.log(`   - Concluídos: ${concluidos}`);
+      console.log(`   - Com tipologia: ${comTipologia}`);
+      console.log(`   - Prontos para tipologia: ${semTipologiaConcluidos}`);
+      console.log(`======================================\n`);
+
+      return res.json({
+        success: true,
+        message: 'Pipelines desbloqueados com sucesso',
+        correcoes: {
+          fotosAtualizadas,
+          clientesTravadosCorrigidos: clientesTravados.length,
+          clientesMarcadosConcluidos: clientesConcluidos,
+        },
+        estatisticas: {
+          totalClientes,
+          concluidos,
+          comTipologia,
+          prontosParaTipologia: semTipologiaConcluidos,
+        },
+      });
+    } catch (error: any) {
+      console.error('Erro ao desbloquear pipelines:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro ao desbloquear pipelines',
+        details: error.message,
+      });
+    }
+  }
 }

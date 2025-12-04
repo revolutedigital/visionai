@@ -30,6 +30,7 @@ router.post('/merge-duplicates', (req, res) => analysisController.mergeDuplicate
 router.post('/reset-stuck', (req, res) => analysisController.resetStuckClients(req, res));
 router.post('/force-fail/:clienteId', (req, res) => analysisController.forceFailClient(req, res));
 router.post('/mark-error-photos-analyzed', (req, res) => analysisController.markErrorPhotosAnalyzed(req, res));
+router.post('/unlock-pipelines', (req, res) => analysisController.unlockPipelines(req, res));
 router.get('/:id/resultado', (req, res) => analysisController.getAnaliseResultado(req, res));
 router.post('/:id', (req, res) => analysisController.analyzeSingle(req, res));
 
