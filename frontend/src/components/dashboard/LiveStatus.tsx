@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../utils/api';
 import { Radio, Loader, AlertCircle } from 'lucide-react';
 import { logger } from '../../utils/logger';
 
@@ -23,7 +24,7 @@ export function LiveStatus() {
     // Por enquanto, fazer polling a cada 5s
     const loadStatus = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/analysis/status`);
+        const response = await authFetch(`${API_BASE_URL}/api/analysis/status`);
         const result = await response.json();
 
         setData({

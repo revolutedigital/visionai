@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { authFetch } from '../utils/api';
 import {
   MapPin,
   Star,
@@ -103,7 +104,7 @@ export function ClienteDetalhes({ clienteId, onBack }: ClienteDetalhesProps) {
   const loadClienteDetalhes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/analysis/${clienteId}/resultado`);
+      const response = await authFetch(`${API_BASE_URL}/api/analysis/${clienteId}/resultado`);
       const result = await response.json();
 
       if (!result.success) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { authFetch } from '../utils/api';
 import {
   MapPin,
   Star,
@@ -68,7 +69,7 @@ export function ClientesList({ onViewDetails }: ClientesListProps) {
   const loadClientes = async () => {
     try {
       // Buscar clientes analisados com dados de IA
-      const response = await fetch(`${API_BASE_URL}/api/analysis/clientes`);
+      const response = await authFetch(`${API_BASE_URL}/api/analysis/clientes`);
       const data = await response.json();
       if (data.success) {
         // Parse análises das fotos

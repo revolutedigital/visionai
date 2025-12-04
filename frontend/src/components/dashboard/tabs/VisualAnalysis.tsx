@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../../config/api';
+import { authFetch } from '../../../utils/api';
 import { VisualInsights } from '../../VisualInsights';
 import { Image } from 'lucide-react';
 import { logger } from '../../../utils/logger';
@@ -14,7 +15,7 @@ function VisualAnalysis() {
 
   const loadTopCliente = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/analysis/clientes?status=CONCLUIDO`);
+      const response = await authFetch(`${API_BASE_URL}/api/analysis/clientes?status=CONCLUIDO`);
       const data = await response.json();
 
       if (data.success && data.clientes && data.clientes.length > 0) {

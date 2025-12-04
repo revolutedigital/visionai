@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../../config/api';
+import { authFetch } from '../../../utils/api';
 import { DataQuality } from '../../DataQuality';
 import { logger } from '../../../utils/logger';
 
@@ -13,7 +14,7 @@ function DataQualityInsights() {
 
   const loadDataQuality = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/data-quality/report`);
+      const response = await authFetch(`${API_BASE_URL}/api/data-quality/report`);
       const data = await response.json();
       setReport(data);
       setLoading(false);
