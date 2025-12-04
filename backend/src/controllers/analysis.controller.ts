@@ -2157,16 +2157,18 @@ export class AnalysisController {
         console.log(`📋 Processando planilha: ${ultimaPlanilha.nomeArquivo}`);
       }
 
-      // Se force=true, reprocessar todos com análise IA concluída (do escopo selecionado)
+      // Se force=true, reprocessar TODOS os clientes (do escopo selecionado)
       // Senão, só processar os sem tipologia
+      // NOTA: Não exigimos mais status 'CONCLUIDO' - clientes sem fotos também serão classificados
+      // (com confiança menor, mas ainda assim classificados)
       const whereClause = force
         ? {
             ...planilhaFilter,
-            status: 'CONCLUIDO',
+            // Processar TODOS os clientes, independente do status
           }
         : {
             ...planilhaFilter,
-            status: 'CONCLUIDO',
+            // Processar clientes sem tipologia, independente do status
             tipologia: null,
           };
 
