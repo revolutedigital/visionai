@@ -2399,4 +2399,82 @@ export class AnalysisController {
       });
     }
   }
+
+  /**
+   * Marcar fotos de clientes com erro como analisadas (para desbloquear progresso)
+   * POST /api/analysis/mark-error-photos-analyzed
+   *
+   * Quando um cliente fica com status ERRO, suas fotos não são marcadas como analisadas,
+   * travando o progresso do pipeline. Este endpoint marca essas fotos como analisadas
+   * (com resultado de erro) para desbloquear o progresso.
+   */
+  async markErrorPhotosAnalyzed(req: Request, res: Response) {
+    try {
+      // Buscar clientes com status ERRO que têm fotos não analisadas
+      const clientesComErro = await prisma.cliente.findMany({
+        where: {
+          status: 'ERRO',
+          fotos: {
+            some: {
+              analisadaPorIA: false,
+            },
+          },
+        },
+        select: {
+          id: true,
+          nome: true,
+          fotos: {
+            where: { analisadaPorIA: false },
+            select: { id: true },
+          },
+        },
+      });
+
+      if (clientesComErro.length === 0) {
+        return res.json({
+          success: true,
+          message: 'Nenhum cliente com erro e fotos pendentes encontrado',
+          clientesProcessados: 0,
+          fotosAtualizadas: 0,
+        });
+      }
+
+      // Marcar todas as fotos desses clientes como analisadas com erro
+      const fotoIds = clientesComErro.flatMap(c => c.fotos.map(f => f.id));
+
+      const result = await prisma.foto.updateMany({
+        where: {
+          id: { in: fotoIds },
+        },
+        data: {
+          analisadaPorIA: true,
+          analiseResultado: JSON.stringify({
+            success: false,
+            error: 'Cliente com erro no processamento',
+            marcadoManualmente: true,
+          }),
+          analiseEm: new Date(),
+        },
+      });
+
+      console.log(`📸 Fotos de clientes com erro marcadas como analisadas:`);
+      console.log(`   - Clientes: ${clientesComErro.length}`);
+      console.log(`   - Fotos: ${result.count}`);
+
+      return res.json({
+        success: true,
+        message: `${result.count} fotos de ${clientesComErro.length} clientes com erro marcadas como analisadas`,
+        clientesProcessados: clientesComErro.length,
+        fotosAtualizadas: result.count,
+        clientes: clientesComErro.map(c => ({ id: c.id, nome: c.nome, fotos: c.fotos.length })),
+      });
+    } catch (error: any) {
+      console.error('Erro ao marcar fotos de clientes com erro:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro ao marcar fotos de clientes com erro',
+        details: error.message,
+      });
+    }
+  }
 }
