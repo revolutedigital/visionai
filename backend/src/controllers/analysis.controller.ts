@@ -228,7 +228,7 @@ export class AnalysisController {
         }),
         prisma.cliente.count({
           where: {
-            normalizacaoStatus: { in: ['SUCESSO', 'FALHA', 'FALHA_PARCIAL'] }, // Todos processados (não PENDENTE nem PROCESSANDO)
+            normalizacaoStatus: { notIn: ['PENDENTE', 'PROCESSANDO'] }, // Todos que não estão pendentes ou processando = processados
           },
         }),
         prisma.cliente.count({ where: { divergenciaEndereco: true } }),
