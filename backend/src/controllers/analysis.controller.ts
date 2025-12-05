@@ -230,6 +230,14 @@ export class AnalysisController {
           where: {
             normalizacaoStatus: { notIn: ['PENDENTE', 'PROCESSANDO'] }, // Todos que não estão pendentes ou processando = processados
           },
+        }).then(async (count) => {
+          // DEBUG: Log para identificar a distribuição de status
+          const distribution = await prisma.cliente.groupBy({
+            by: ['normalizacaoStatus'],
+            _count: true,
+          });
+          console.log('📊 DEBUG Normalização - Total:', count, 'Distribuição:', JSON.stringify(distribution));
+          return count;
         }),
         prisma.cliente.count({ where: { divergenciaEndereco: true } }),
         prisma.cliente.count({ where: { latitude: { not: null } } }), // Clientes com coordenadas
